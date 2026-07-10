@@ -145,15 +145,16 @@ CREATE TABLE discount_tier (
 -- CONTRACT (consumed from pricing system; read-only inputs)
 -- =========================================================
 CREATE TABLE contract (
-    contract_id     VARCHAR(40) PRIMARY KEY,        -- 'CTR-001'
-    account_id      UUID NOT NULL REFERENCES account(account_id),
-    program_id      UUID NOT NULL REFERENCES pricing_program(program_id),
-    tier            VARCHAR(30),
-    fuel_program    VARCHAR(30) NOT NULL REFERENCES fuel_program(fuel_program),
-    payment_terms   VARCHAR(20),
-    effective_from  DATE NOT NULL,
-    effective_to    DATE,
-    source_system   VARCHAR(40) DEFAULT 'PRICING_SYSTEM'
+    contract_id          VARCHAR(40) PRIMARY KEY,    -- 'CTR-001'
+    account_id           UUID NOT NULL REFERENCES account(account_id),
+    program_id           UUID NOT NULL REFERENCES pricing_program(program_id),
+    tier                 VARCHAR(30),
+    fuel_program         VARCHAR(30) NOT NULL REFERENCES fuel_program(fuel_program),
+    payment_terms        VARCHAR(20),                -- NET30
+    late_payment_fee_pct NUMERIC(5,4) NOT NULL DEFAULT 0.0100,  -- 1% per month on overdue balance
+    effective_from       DATE NOT NULL,
+    effective_to         DATE,
+    source_system        VARCHAR(40) DEFAULT 'PRICING_SYSTEM'
 );
 
 -- surcharge reductions / fuel caps / flat credits negotiated on the contract

@@ -33,7 +33,7 @@ Run this **first**, then load sample data with the DML script (see the DML READM
 | Fuel | `fuel_program`, `fuel_index` | weekly fuel-index based surcharge |
 | Accessorials | `accessorial_type` | surcharge rule cards (residential, delivery area, …) |
 | Pricing | `discount_category`, `pricing_program`, `discount_tier` | 5 service categories + **FLAT vs VOLUME_TIERED** discounts |
-| Contract | `contract`, `contract_incentive` | consumed pricing (read-only), surcharge reductions |
+| Contract | `contract`, `contract_incentive` | consumed pricing (read-only), surcharge reductions, late payment fee |
 | Payment / profile | `payment_plan`, `payment_plan_account`, `customer_profile` | billing plans + invoice preferences |
 | Baseline | `shipment`, `shipment_charge`, `baseline_snapshot` | 12 months history + cached aggregates |
 | Chat / audit | `conversation`, `chat_message`, `simulation_scenario` | conversation + auditable scenarios |

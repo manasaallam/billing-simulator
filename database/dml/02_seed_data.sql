@@ -58,7 +58,11 @@ INSERT INTO accessorial_type (code, display_name, default_fee, trigger_rule, app
   ('DEMAND',                 'Demand Surcharge',                           3.50, 'PeakSeason=true',                                       'PER_PACKAGE'),
   ('SATURDAY',               'Saturday Delivery',                         16.00, 'DeliveryDay=Saturday',                                  'PER_SHIPMENT'),
   ('DECLARED_VALUE',         'Declared Value',                             3.00, 'DeclaredValue>100',                                     'PER_PACKAGE'),
-  ('PREMIUM_AIR',            'Premium Air Fee',                            4.25, 'Service=EXPRESS',                                       'PER_PACKAGE');
+  ('PREMIUM_AIR',            'Premium Air Fee',                            4.25, 'Service=EXPRESS',                                       'PER_PACKAGE'),
+  -- International import/customs charges (actual amounts come from customs; default_fee=0)
+  ('DUTY',                   'Customs Duty',                               0.00, 'ImportShipment=true',                                   'PER_SHIPMENT'),
+  ('VAT',                    'Value Added Tax',                            0.00, 'ImportShipment=true',                                   'PER_SHIPMENT'),
+  ('BROKERAGE_FEE',          'Third Party Disbursement Fee',               0.00, 'BrokerRequired=true',                                   'PER_SHIPMENT');
   ('SATURDAY',      'Saturday Delivery',         16.00, 'DeliveryDay=Saturday',     'PER_SHIPMENT'),
   ('DECLARED_VALUE','Declared Value',             3.00, 'DeclaredValue>100',        'PER_PACKAGE'),
   ('PREMIUM_AIR',   'Premium Air Fee',            4.25, 'Service=EXPRESS',          'PER_PACKAGE');
@@ -187,9 +191,9 @@ INSERT INTO customer_profile (account_id, invoice_frequency, media, sort_option,
 -- ---------------------------------------------------------
 -- CONTRACT (demo account runs on the VOLUME_TIERED program)
 -- ---------------------------------------------------------
-INSERT INTO contract (contract_id, account_id, program_id, tier, fuel_program, payment_terms, effective_from) VALUES
+INSERT INTO contract (contract_id, account_id, program_id, tier, fuel_program, payment_terms, late_payment_fee_pct, effective_from) VALUES
   ('CTR-001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-   '22222222-2222-2222-2222-222222222222', 'STANDARD', 'FUEL_STANDARD', 'NET30', DATE '2026-01-01');
+   '22222222-2222-2222-2222-222222222222', 'STANDARD', 'FUEL_STANDARD', 'NET30', 0.0100, DATE '2026-01-01');
 
 -- surcharge reductions on the contract
 -- 40% off all 7 discountable surcharge codes (domestic + international)
@@ -249,4 +253,10 @@ INSERT INTO knowledge_article (kind, key_code, business_reason, source_doc) VALU
   ('CHARGE_EXPLANATION','RESIDENTIAL','Applied for delivery to a residential address.', 'surcharge_guide'),
   ('CHARGE_EXPLANATION','DELIVERY_AREA','Applied for delivery to an extended/remote area.', 'surcharge_guide'),
   ('POLICY','MIN_SHIPPING_CHARGE','A package is billed the greater of its discounted net or the published minimum charge.', 'incentive_agreement'),
-  ('POLICY','DISCOUNT_SCOPE','Incentives apply only to base transportation rates, not to surcharges (except those explicitly listed).', 'incentive_agreement');
+  ('POLICY','DISCOUNT_SCOPE','Incentives apply only to base transportation rates, not to surcharges (except those explicitly listed).', 'incentive_agreement'),
+  -- International invoice sections and charge explanations
+  ('INVOICE_SECTION',  'Government Charges',  'Groups customs duty and VAT assessed on international import shipments by the importing country.', 'intl_invoice_template'),
+  ('INVOICE_SECTION',  'Brokerage Charges',   'Fees paid to the customs broker on your behalf to facilitate customs clearance.', 'intl_invoice_template'),
+  ('CHARGE_EXPLANATION','DUTY',              'Customs duty imposed by the importing country based on the declared value and commodity type of the shipment.', 'intl_surcharge_guide'),
+  ('CHARGE_EXPLANATION','VAT',               'Value Added Tax applied by the importing country on the goods being imported. Rate varies by country and commodity.', 'intl_surcharge_guide'),
+  ('CHARGE_EXPLANATION','BROKERAGE_FEE',     'Third-party disbursement fee charged by the customs broker for processing import documentation on your behalf.', 'intl_surcharge_guide');
