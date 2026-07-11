@@ -58,11 +58,7 @@ INSERT INTO accessorial_type (code, display_name, default_fee, trigger_rule, app
   ('DEMAND',                 'Demand Surcharge',                           3.50, 'PeakSeason=true',                                       'PER_PACKAGE'),
   ('SATURDAY',               'Saturday Delivery',                         16.00, 'DeliveryDay=Saturday',                                  'PER_SHIPMENT'),
   ('DECLARED_VALUE',         'Declared Value',                             3.00, 'DeclaredValue>100',                                     'PER_PACKAGE'),
-  ('PREMIUM_AIR',            'Premium Air Fee',                            4.25, 'Service=EXPRESS',                                       'PER_PACKAGE'),
-  -- International import/customs charges (actual amounts come from customs; default_fee=0)
-  ('DUTY',                   'Customs Duty',                               0.00, 'ImportShipment=true',                                   'PER_SHIPMENT'),
-  ('VAT',                    'Value Added Tax',                            0.00, 'ImportShipment=true',                                   'PER_SHIPMENT'),
-  ('BROKERAGE_FEE',          'Third Party Disbursement Fee',               0.00, 'BrokerRequired=true',                                   'PER_SHIPMENT');
+  ('PREMIUM_AIR',            'Premium Air Fee',                            4.25, 'Service=EXPRESS',                                       'PER_PACKAGE');
   ('SATURDAY',      'Saturday Delivery',         16.00, 'DeliveryDay=Saturday',     'PER_SHIPMENT'),
   ('DECLARED_VALUE','Declared Value',             3.00, 'DeclaredValue>100',        'PER_PACKAGE'),
   ('PREMIUM_AIR',   'Premium Air Fee',            4.25, 'Service=EXPRESS',          'PER_PACKAGE');
@@ -253,10 +249,26 @@ INSERT INTO knowledge_article (kind, key_code, business_reason, source_doc) VALU
   ('CHARGE_EXPLANATION','RESIDENTIAL','Applied for delivery to a residential address.', 'surcharge_guide'),
   ('CHARGE_EXPLANATION','DELIVERY_AREA','Applied for delivery to an extended/remote area.', 'surcharge_guide'),
   ('POLICY','MIN_SHIPPING_CHARGE','A package is billed the greater of its discounted net or the published minimum charge.', 'incentive_agreement'),
-  ('POLICY','DISCOUNT_SCOPE','Incentives apply only to base transportation rates, not to surcharges (except those explicitly listed).', 'incentive_agreement'),
-  -- International invoice sections and charge explanations
-  ('INVOICE_SECTION',  'Government Charges',  'Groups customs duty and VAT assessed on international import shipments by the importing country.', 'intl_invoice_template'),
-  ('INVOICE_SECTION',  'Brokerage Charges',   'Fees paid to the customs broker on your behalf to facilitate customs clearance.', 'intl_invoice_template'),
-  ('CHARGE_EXPLANATION','DUTY',              'Customs duty imposed by the importing country based on the declared value and commodity type of the shipment.', 'intl_surcharge_guide'),
-  ('CHARGE_EXPLANATION','VAT',               'Value Added Tax applied by the importing country on the goods being imported. Rate varies by country and commodity.', 'intl_surcharge_guide'),
-  ('CHARGE_EXPLANATION','BROKERAGE_FEE',     'Third-party disbursement fee charged by the customs broker for processing import documentation on your behalf.', 'intl_surcharge_guide');
+  ('POLICY','DISCOUNT_SCOPE','Incentives apply only to base transportation rates, not to surcharges (except those explicitly listed).', 'incentive_agreement');
+
+-- =========================================================
+-- PATCH: International import charge types (added 2026-07-11)
+-- Source: International Package Services invoice sample
+-- Run in Supabase SQL Editor if seed data is already loaded.
+-- =========================================================
+INSERT INTO accessorial_type (code, display_name, default_fee, trigger_rule, apply_basis) VALUES
+  ('DUTY',           'Customs Duty',                  0.00, 'ImportShipment=true',  'PER_SHIPMENT'),
+  ('VAT',            'Value Added Tax',               0.00, 'ImportShipment=true',  'PER_SHIPMENT'),
+  ('BROKERAGE_FEE',  'Third Party Disbursement Fee',  0.00, 'BrokerRequired=true',  'PER_SHIPMENT'),
+  ('TRAILER_PICKUP', 'Trailer Pickup Adjustment',     2.50, 'PickupType=Trailer',   'PER_SHIPMENT');
+
+INSERT INTO knowledge_article (kind, key_code, business_reason, source_doc) VALUES
+  ('INVOICE_SECTION',   'Government Charges',         'Groups customs duty and VAT assessed on international import shipments by the importing country.',                                                         'intl_invoice_template'),
+  ('INVOICE_SECTION',   'Brokerage Charges',          'Fees paid to the customs broker on your behalf to facilitate customs clearance.',                                                                          'intl_invoice_template'),
+  ('INVOICE_SECTION',   'Shipping Charge Corrections','Adjustments applied after initial billing when the original service, weight, or zone is corrected. Common causes: non-corrugated packaging, zone errors.', 'corrections_guide'),
+  ('CHARGE_EXPLANATION','DUTY',                       'Customs duty imposed by the importing country based on the declared value and commodity type of the shipment.',                                             'intl_surcharge_guide'),
+  ('CHARGE_EXPLANATION','VAT',                        'Value Added Tax applied by the importing country on the goods being imported. Rate varies by country and commodity.',                                       'intl_surcharge_guide'),
+  ('CHARGE_EXPLANATION','BROKERAGE_FEE',              'Third-party disbursement fee paid to the customs broker for processing import documentation on your behalf.',                                               'intl_surcharge_guide'),
+  ('CHARGE_EXPLANATION','TRAILER_PICKUP',             'Applied when a trailer pickup is arranged instead of a standard driver pickup.',                                                                            'surcharge_guide'),
+  ('POLICY',            'ACH_PAYMENT_REQUIRED',       'For certain accounts, incentives are conditioned on payment by ACH transfer or credit/debit card. Paying by other methods may forfeit contract discounts.','carrier_agreement'),
+  ('POLICY',            'UNDELIVERABLE_RETURN',       'Undeliverable packages are returned under the same service used for the original shipment. Original incentives apply to the return leg.',                   'carrier_agreement');
