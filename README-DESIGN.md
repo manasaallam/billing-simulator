@@ -265,12 +265,14 @@ Service codes (replace their human-readable names):
 | Change from | Change to |
 |---|---|
 | `"Ground"` | `"GROUND"` |
-| `"Express"` | `"EXPRESS"` |
-| `"Next Day Air"` | `"EXPRESS"` |
+| `"Ground Residential"` | `"GROUND_RES"` |
+| `"Next Day Air"` / `"Express"` | `"EXPRESS"` (Next Day Express, 1-day air) |
 | `"Express Saver"` | `"EXPRESS_SAVER"` |
 | `"2nd Day Air"` | `"TWO_DAY"` |
 | `"3 Day Select"` | `"THREE_DAY"` |
-| `"Standard"` | `"INTL_STANDARD"` |
+| `"International Standard"` | `"INTL_STANDARD"` |
+| `"International Express Export"` | `"INTL_EXP_EXPORT"` |
+| `"International Express Import"` | `"INTL_EXP_IMPORT"` |
 
 Surcharge codes (replace their short codes):
 | Change from | Change to |

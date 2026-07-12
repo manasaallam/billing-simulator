@@ -1,0 +1,10 @@
+[
+  {"week": "2026-W20", "dieselIndex": 4.85, "groundFuelPct": 13.25, "airFuelPct": 22.50},
+  {"week": "2026-W21", "dieselIndex": 4.92, "groundFuelPct": 13.50, "airFuelPct": 22.75},
+  {"week": "2026-W22", "dieselIndex": 5.01, "groundFuelPct": 14.00, "airFuelPct": 23.25},
+  {"week": "2026-W23", "dieselIndex": 5.10, "groundFuelPct": 14.25, "airFuelPct": 23.50},
+  {"week": "2026-W24", "dieselIndex": 5.15, "groundFuelPct": 14.50, "airFuelPct": 23.75},
+  {"week": "2026-W25", "dieselIndex": 5.21, "groundFuelPct": 14.75, "airFuelPct": 24.00},
+  {"week": "2026-W26", "dieselIndex": 5.18, "groundFuelPct": 14.75, "airFuelPct": 24.00},
+  {"week": "2026-W27", "dieselIndex": 5.25, "groundFuelPct": 15.00, "airFuelPct": 24.25}
+]
