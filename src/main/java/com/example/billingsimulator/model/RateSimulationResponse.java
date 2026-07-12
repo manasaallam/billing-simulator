@@ -54,6 +54,9 @@ public class RateSimulationResponse {
     private String confidence;   // HIGH | MEDIUM | LOW
     private String caveat;
 
+    // ---- AI-generated plain-English explanation of results -------------
+    private String explanation;
+
     // -----------------------------------------------------------------------
 
     public static class OptimizationHint {
@@ -142,4 +145,6 @@ public class RateSimulationResponse {
     public void setConfidence(String confidence) { this.confidence = confidence; }
     public String getCaveat() { return caveat; }
     public void setCaveat(String caveat) { this.caveat = caveat; }
+    public String getExplanation() { return explanation; }
+    public void setExplanation(String explanation) { this.explanation = explanation; }
 }

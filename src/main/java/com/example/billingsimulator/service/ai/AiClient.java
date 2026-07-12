@@ -21,4 +21,12 @@ public interface AiClient {
      * @return JSON string representing extracted SimulationParameters
      */
     String generate(String systemPrompt, String userMessage);
+
+    /**
+     * Take a rate engine result JSON and return a plain-English business explanation.
+     *
+     * @param resultsJson  serialized RateSimulationResponse from the rate engine
+     * @return plain-text explanation suitable for display to the customer
+     */
+    String explain(String resultsJson);
 }

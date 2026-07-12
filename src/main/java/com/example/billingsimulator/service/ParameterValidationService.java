@@ -19,16 +19,17 @@ public class ParameterValidationService {
 
     private static final Logger log = LoggerFactory.getLogger(ParameterValidationService.class);
 
-    // Known UPS service levels
+    // Known UPS service levels — must match exact DB codes used by ParameterExtractionService
     private static final Set<String> VALID_SERVICES = Set.of(
-            "Ground", "Express", "Next Day Air", "2nd Day Air", "3 Day Select",
-            "SurePost", "Standard", "Expedited", "Next Day Air Saver",
-            "Next Day Air Early", "2nd Day Air AM"
+            "GROUND", "GROUND_RES", "EXPRESS", "EXPRESS_SAVER",
+            "TWO_DAY", "THREE_DAY",
+            "INTL_STANDARD", "INTL_EXP_EXPORT", "INTL_EXP_IMPORT"
     );
 
-    // Known accessorial surcharge codes
+    // Known accessorial surcharge codes — must match exact DB codes used by ParameterExtractionService
     private static final Set<String> VALID_SURCHARGE_CODES = Set.of(
-            "DAS", "AH", "DS", "SAT", "DV", "LPS", "PAF", "RES"
+            "DELIVERY_AREA", "ADDL_HANDLING", "DEMAND", "SATURDAY",
+            "DECLARED_VALUE", "PREMIUM_AIR", "RESIDENTIAL", "DELIVERY_AREA_EXT"
     );
 
     private static final Set<String> VALID_CHANGE_TYPES = Set.of("ABSOLUTE", "PERCENTAGE");
@@ -140,7 +141,7 @@ public class ParameterValidationService {
             } else if (!isValidService(shift.getFromService())) {
                 questions.add(new ClarificationQuestion(
                         "fromService",
-                        "'" + shift.getFromService() + "' is not a recognized service level. Which did you mean?",
+                        "'" + shift.getFromService() + "' is not a recognized service code. Which did you mean?",
                         List.copyOf(VALID_SERVICES)
                 ));
             }
@@ -155,7 +156,7 @@ public class ParameterValidationService {
             } else if (!isValidService(shift.getToService())) {
                 questions.add(new ClarificationQuestion(
                         "toService",
-                        "'" + shift.getToService() + "' is not a recognized service level. Which did you mean?",
+                        "'" + shift.getToService() + "' is not a recognized service code. Which did you mean?",
                         List.copyOf(VALID_SERVICES)
                 ));
             }
@@ -467,8 +468,7 @@ public class ParameterValidationService {
                 questions.add(new ClarificationQuestion(
                         "surchargeCode",
                         "Which surcharge are you asking about?",
-                        List.of("Delivery Area Surcharge (DAS)", "Additional Handling", "Demand Surcharge",
-                                "Saturday Delivery", "Declared Value", "Large Package Surcharge")
+                        List.copyOf(VALID_SURCHARGE_CODES)
                 ));
             }
 
@@ -478,7 +478,7 @@ public class ParameterValidationService {
                 questions.add(new ClarificationQuestion(
                         "surchargeCode",
                         "'" + ac.getSurchargeCode() + "' is not a recognized surcharge code.",
-                        List.of("DAS", "AH", "DS", "SAT", "DV", "LPS", "PAF")
+                        List.copyOf(VALID_SURCHARGE_CODES)
                 ));
             }
 

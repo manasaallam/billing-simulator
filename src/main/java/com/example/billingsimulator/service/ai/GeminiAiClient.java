@@ -7,10 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -31,12 +34,19 @@ public class GeminiAiClient implements AiClient {
     private final WebClient webClient;
     private final String apiKey;
     private final String model;
+    private final String explanationPrompt;
 
     public GeminiAiClient(
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model:gemini-2.0-flash}") String model) {
+            @Value("${gemini.model:gemini-2.0-flash}") String model,
+            @Value("classpath:prompts/explanation-prompt.txt") Resource explanationPromptResource) {
         this.apiKey = apiKey;
         this.model = model;
+        try {
+            this.explanationPrompt = explanationPromptResource.getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load explanation-prompt.txt", e);
+        }
         this.webClient = WebClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com/v1beta")
                 .build();
@@ -73,6 +83,38 @@ public class GeminiAiClient implements AiClient {
         } catch (Exception e) {
             log.error("Gemini call failed: {}", e.getMessage());
             return "{}";
+        }
+    }
+
+    @Override
+    public String explain(String resultsJson) {
+        log.info("Calling Gemini for NL explanation");
+
+        Map<String, Object> requestBody = Map.of(
+                "system_instruction", Map.of(
+                        "parts", List.of(Map.of("text", explanationPrompt))
+                ),
+                "contents", List.of(
+                        Map.of("parts", List.of(Map.of("text", resultsJson)))
+                ),
+                "generationConfig", Map.of(
+                        "temperature", 0.7
+                )
+        );
+
+        try {
+            String response = webClient.post()
+                    .uri("/models/{model}:generateContent?key={key}", model, apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            return extractContent(response);
+        } catch (Exception e) {
+            log.error("Gemini explanation call failed: {}", e.getMessage());
+            return null;
         }
     }
 

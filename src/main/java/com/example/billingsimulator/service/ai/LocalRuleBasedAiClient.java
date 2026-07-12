@@ -1,6 +1,7 @@
 package com.example.billingsimulator.service.ai;
 
 import com.example.billingsimulator.model.*;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,6 @@ import java.util.regex.Pattern;
  *   - "Avoid/eliminate <surcharge>"
  */
 @Component
-@Primary
 public class LocalRuleBasedAiClient implements AiClient {
 
     private static final Logger log = LoggerFactory.getLogger(LocalRuleBasedAiClient.class);
@@ -57,6 +57,37 @@ public class LocalRuleBasedAiClient implements AiClient {
         } catch (Exception e) {
             log.error("Extraction failed", e);
             return "{}";
+        }
+    }
+
+    @Override
+    public String explain(String resultsJson) {
+        log.info("Local rule-based explanation");
+        try {
+            JsonNode r = objectMapper.readTree(resultsJson);
+            String scenario  = r.path("scenarioType").asText("simulation");
+            double baseline  = r.path("baselineAnnualCost").asDouble(0);
+            double projected = r.path("projectedAnnualCost").asDouble(0);
+            double delta     = r.path("annualDelta").asDouble(0);
+            double pct       = r.path("deltaPct").asDouble(0);
+            String tierNote  = r.path("tierUpgradeNote").asText(null);
+
+            String direction = delta < 0 ? "decrease" : "increase";
+            String savingsWord = delta < 0 ? "saving" : "costing";
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format(
+                "Based on the %s scenario, your projected annual shipping cost would %s from $%,.0f to $%,.0f, %s approximately $%,.0f (%.1f%%).",
+                scenario.replace("_", " ").toLowerCase(), direction, baseline, projected, savingsWord, Math.abs(delta), Math.abs(pct)
+            ));
+            if (tierNote != null && !tierNote.isBlank()) {
+                sb.append(" ").append(tierNote);
+            }
+            sb.append(" These results are projections based on historical shipping data and are not a final quote.");
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("Local explanation failed", e);
+            return "Results are projections based on historical data and are not a final quote.";
         }
     }
 

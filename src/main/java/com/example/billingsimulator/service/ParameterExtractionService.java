@@ -1,5 +1,6 @@
 package com.example.billingsimulator.service;
 
+import com.example.billingsimulator.model.RateSimulationResponse;
 import com.example.billingsimulator.model.SimulationParameters;
 import com.example.billingsimulator.service.ai.AiClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,6 +76,21 @@ public class ParameterExtractionService {
         } catch (Exception e) {
             log.error("Failed to deserialize extracted parameters: {}", jsonResponse, e);
             return new SimulationParameters();
+        }
+    }
+
+    /**
+     * Takes the rate engine's RateSimulationResponse and asks the AI to phrase
+     * the numbers as a plain-English business answer for the customer.
+     */
+    public String explainResult(RateSimulationResponse resp) {
+        try {
+            String json = objectMapper.writeValueAsString(resp);
+            String explanation = aiClient.explain(json);
+            return (explanation != null && !explanation.isBlank()) ? explanation : resp.getCaveat();
+        } catch (Exception e) {
+            log.error("Failed to generate explanation", e);
+            return resp.getCaveat();
         }
     }
 }

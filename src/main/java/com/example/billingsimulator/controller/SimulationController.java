@@ -109,6 +109,7 @@ public class SimulationController {
         RateSimulationRequest rateReq = mapToRateRequest(params, contractId);
         RateSimulationResponse rateResp = simulationService.dispatch(rateReq);
         SimulationResult result = mapToResult(rateResp);
+        result.setExplanation(extractionService.explainResult(rateResp));
         return SimulationResponse.success(result, conversationId);
     }
 
@@ -199,7 +200,6 @@ public class SimulationController {
             result.setSavingsPercentage(-resp.getDeltaPct().doubleValue());
         }
         result.setConfidenceLevel(resp.getConfidence() != null ? resp.getConfidence().toUpperCase() : "MEDIUM");
-        result.setExplanation(resp.getCaveat());
         return result;
     }
 }
