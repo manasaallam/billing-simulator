@@ -11,18 +11,21 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Simulation scenario endpoints.
  *
- * PRIMARY ENTRY POINT (AI uses this):
- *   POST /api/simulate   — send scenarioType in the body; backend dispatches automatically
+ * PRIMARY ENTRY POINT (AI uses this after parameter extraction):
+ *   POST /api/rate/simulate   — send scenarioType in the body; backend dispatches automatically
  *
  * Valid scenarioType values:
  *   VOLUME_CHANGE | SERVICE_SHIFT | PACKAGE_PROFILE | ZONE_MIX |
  *   ACCESSORIAL   | FUEL_CHANGE   | COMBINED        | OPTIMIZE | COMPARE
  *
- * Individual sub-paths (/api/simulate/volume-change etc.) are also available
+ * Individual sub-paths (/api/rate/simulate/volume-change etc.) are also available
  * and do not require scenarioType in the body.
+ *
+ * NOTE: /api/simulate is owned by the AI/chat team (NL text → extraction → clarification).
+ *       This controller handles only structured-param calculation requests.
  */
 @RestController
-@RequestMapping("/api/simulate")
+@RequestMapping("/api/rate/simulate")
 public class SimulationController {
 
     private final SimulationService simulationService;

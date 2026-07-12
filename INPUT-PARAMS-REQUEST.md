@@ -11,7 +11,9 @@ The AI only needs to know **two endpoints**:
 | Question type | Endpoint | Request object |
 |---|---|---|
 | "What does it cost to ship this package?" | `POST /api/rate/quote` | `RateQuoteRequest` |
-| "What if I change volume / service / weight / fuel / zones / surcharges?" | `POST /api/simulate` | `SimulationRequest` with `scenarioType` |
+| "What if I change volume / service / weight / fuel / zones / surcharges?" | `POST /api/rate/simulate` | `SimulationRequest` with `scenarioType` |
+
+> **URL ownership:** `POST /api/simulate` is owned by the AI/chat team (natural language → extraction → clarification flow). Once the AI has all parameters, it calls `POST /api/rate/simulate` with the structured request.
 
 The AI's job:
 1. Classify the question → **RATE_QUOTE** or **SIMULATION**
@@ -153,6 +155,8 @@ No request body. Returns list of available rate card version strings (e.g. `["20
 
 ## 4. Simulation Endpoints
 
+**Base path: `/api/rate/simulate`**
+
 All simulation endpoints share a common base. `scenarioType` is **set automatically by the endpoint URL** — do not include it in the request body.
 
 ### Common fields (all scenarios)
@@ -166,7 +170,7 @@ All simulation endpoints share a common base. `scenarioType` is **set automatica
 
 ### 4a. Volume Change
 
-**`POST /api/simulate/volume-change`**
+**`POST /api/rate/simulate/volume-change`**
 
 *"What if I ship X packages per week instead of my current 20?"*
 Tier upgrade/downgrade impact on annual cost.
@@ -186,7 +190,7 @@ Tier upgrade/downgrade impact on annual cost.
 
 ### 4b. Service Shift
 
-**`POST /api/simulate/service-shift`**
+**`POST /api/rate/simulate/service-shift`**
 
 *"What if I move 30% of my GROUND volume to THREE_DAY?"*
 
@@ -209,7 +213,7 @@ Tier upgrade/downgrade impact on annual cost.
 
 ### 4c. Package Profile
 
-**`POST /api/simulate/package-profile`**
+**`POST /api/rate/simulate/package-profile`**
 
 *"What if my average package weight increases to 15 lbs?"*
 
@@ -231,7 +235,7 @@ Tier upgrade/downgrade impact on annual cost.
 
 ### 4d. Zone Mix
 
-**`POST /api/simulate/zone-mix`**
+**`POST /api/rate/simulate/zone-mix`**
 
 *"What if 40% of my shipments go to zone 8 instead of 10%?"*
 
@@ -254,7 +258,7 @@ Tier upgrade/downgrade impact on annual cost.
 
 ### 4e. Accessorial Change
 
-**`POST /api/simulate/accessorial`**
+**`POST /api/rate/simulate/accessorial`**
 
 *"What if all my packages stop going to residential addresses?"*
 *"What if all packages need Saturday delivery?"*
@@ -286,7 +290,7 @@ At least one of `addAccessorialCodes` or `removeAccessorialCodes` must be popula
 
 ### 4f. Fuel Change
 
-**`POST /api/simulate/fuel-change`**
+**`POST /api/rate/simulate/fuel-change`**
 
 *"What if the fuel surcharge increases to 18%?"*
 
@@ -305,7 +309,7 @@ At least one of `addAccessorialCodes` or `removeAccessorialCodes` must be popula
 
 ### 4g. Combined
 
-**`POST /api/simulate/combined`**
+**`POST /api/rate/simulate/combined`**
 
 *"What if I ship 35/week, packages weigh 12 lbs avg, and fuel hits 18%?"*
 Apply any combination of the scenario fields at once. Changes are applied in order: volume → weight → fuel.
@@ -328,7 +332,7 @@ Populate any combination of:
 
 ### 4h. Optimize (Next Tier)
 
-**`POST /api/simulate/optimize`**
+**`POST /api/rate/simulate/optimize`**
 
 *"How many more packages per week do I need to ship to hit the next discount tier?"*
 
@@ -344,7 +348,7 @@ No extra fields required beyond `contractId`.
 
 ### 4i. Compare
 
-**`POST /api/simulate/compare`**
+**`POST /api/rate/simulate/compare`**
 
 *"Show me side-by-side: shipping 30/week vs 50/week vs switching to Express."*
 
