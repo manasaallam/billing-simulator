@@ -82,27 +82,27 @@ public class ParameterValidationService {
             questions.addAll(validateServiceShifts(parameters.getServiceShifts()));
         }
 
-        if (parameters.getVolumeChange() != null) {
+        if (questions.isEmpty() && parameters.getVolumeChange() != null) {
             questions.addAll(validateVolumeChange(parameters.getVolumeChange()));
         }
 
-        if (parameters.getPackageProfile() != null) {
+        if (questions.isEmpty() && parameters.getPackageProfile() != null) {
             questions.addAll(validatePackageProfile(parameters.getPackageProfile()));
         }
 
-        if (parameters.getFuelChange() != null) {
+        if (questions.isEmpty() && parameters.getFuelChange() != null) {
             questions.addAll(validateFuelChange(parameters.getFuelChange()));
         }
 
-        if (parameters.getDeliveryTypeChange() != null) {
+        if (questions.isEmpty() && parameters.getDeliveryTypeChange() != null) {
             questions.addAll(validateDeliveryTypeChange(parameters.getDeliveryTypeChange()));
         }
 
-        if (parameters.getAccessorialChanges() != null && !parameters.getAccessorialChanges().isEmpty()) {
+        if (questions.isEmpty() && parameters.getAccessorialChanges() != null && !parameters.getAccessorialChanges().isEmpty()) {
             questions.addAll(validateAccessorialChanges(parameters.getAccessorialChanges()));
         }
 
-        if (parameters.getTimeframePeriod() != null && !VALID_TIMEFRAMES.contains(parameters.getTimeframePeriod())) {
+        if (questions.isEmpty() && parameters.getTimeframePeriod() != null && !VALID_TIMEFRAMES.contains(parameters.getTimeframePeriod())) {
             questions.add(new ClarificationQuestion(
                     "timeframePeriod",
                     "What time period should this simulation cover?",

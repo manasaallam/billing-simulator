@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -20,7 +22,7 @@ import java.util.UUID;
  *   POST /api/simulate/clarify → Re-run with clarification answers
  *
  * Flow:
- *   1. Extract parameters from NL (AI)
+ *   1. Extract parameters from NL (AI) — or use pre-extracted params
  *   2. Validate parameters (Java rules)
  *   3. If invalid → return clarification questions
  *   4. If valid → run simulation (future: rate engine)
@@ -49,27 +51,23 @@ public class SimulationController {
 
         String conversationId = UUID.randomUUID().toString();
 
-        // Step 1: Extract parameters from natural language
-        SimulationParameters params = extractionService.extract(request.getNaturalLanguageQuery());
+        try {
+            // Step 1: Extract parameters (or use pre-extracted if provided)
+            SimulationParameters params;
+            if (request.getExtractedParameters() != null && request.getExtractedParameters().hasAnyScenario()) {
+                params = request.getExtractedParameters();
+                log.info("Using pre-extracted parameters");
+            } else {
+                params = extractionService.extract(request.getNaturalLanguageQuery());
+            }
 
-        // Step 2: Validate extracted parameters
-        List<ClarificationQuestion> questions = validationService.validate(params);
+            // Steps 2-4: Validate and run
+            return ResponseEntity.ok(validateAndSimulate(params, conversationId));
 
-        if (!questions.isEmpty()) {
-            // Parameters are incomplete/ambiguous — ask for clarification
-            log.info("Clarification needed: {} question(s)", questions.size());
-            return ResponseEntity.ok(
-                    SimulationResponse.needsClarification(questions, conversationId)
-            );
+        } catch (Exception e) {
+            log.error("Simulation failed", e);
+            return ResponseEntity.ok(SimulationResponse.error("Something went wrong. Please try again."));
         }
-
-        // Step 3: Parameters valid — run simulation (TODO: rate engine integration)
-        log.info("Parameters valid — running simulation");
-        SimulationResult result = buildMockResult(params);
-
-        return ResponseEntity.ok(
-                SimulationResponse.success(result, conversationId)
-        );
     }
 
     /**
@@ -84,40 +82,117 @@ public class SimulationController {
                 ? request.getConversationId()
                 : UUID.randomUUID().toString();
 
-        // Parameters come pre-structured from the UI (user answered clarification questions)
-        SimulationParameters params = request.getExtractedParameters();
+        try {
+            SimulationParameters params = request.getExtractedParameters();
 
-        // Validate again
-        List<ClarificationQuestion> questions = validationService.validate(params);
+            // Fail fast if no parameters provided in clarification
+            if (params == null) {
+                return ResponseEntity.ok(SimulationResponse.error("No parameters provided in clarification."));
+            }
 
-        if (!questions.isEmpty()) {
-            return ResponseEntity.ok(
-                    SimulationResponse.needsClarification(questions, conversationId)
-            );
+            return ResponseEntity.ok(validateAndSimulate(params, conversationId));
+
+        } catch (Exception e) {
+            log.error("Clarification failed", e);
+            return ResponseEntity.ok(SimulationResponse.error("Something went wrong. Please try again."));
         }
-
-        // Valid — run simulation
-        SimulationResult result = buildMockResult(params);
-
-        return ResponseEntity.ok(
-                SimulationResponse.success(result, conversationId)
-        );
     }
 
     /**
-     * Mock result until rate engine is integrated (other team's work).
-     * Returns a placeholder result so the full flow can be tested end-to-end.
+     * Common logic: validate parameters → return clarification or simulation result.
+     */
+    private SimulationResponse validateAndSimulate(SimulationParameters params, String conversationId) {
+        // Step 2: Validate extracted parameters
+        List<ClarificationQuestion> questions = validationService.validate(params);
+
+        if (!questions.isEmpty()) {
+            log.info("Clarification needed: {} question(s)", questions.size());
+            return SimulationResponse.needsClarification(questions, conversationId);
+        }
+
+        // Step 3: Parameters valid — run simulation
+        // TODO: Replace mock with real rate engine:
+        //   CustomerBaseline baseline = baselineService.getBaseline(customerId);
+        //   SimulationResult result = rateEngineService.runSimulation(baseline, params);
+        log.info("Parameters valid — running simulation");
+        SimulationResult result = buildMockResult(params);
+
+        return SimulationResponse.success(result, conversationId);
+    }
+
+    /**
+     * Mock result — varies based on scenario type for a more realistic demo.
+     * Replace with real rate engine on hackathon day.
      */
     private SimulationResult buildMockResult(SimulationParameters params) {
         SimulationResult result = new SimulationResult();
         result.setSimulationId(UUID.randomUUID().toString());
-        result.setCurrentInvoiceTotal(new java.math.BigDecimal("502000"));
-        result.setProjectedInvoiceTotal(new java.math.BigDecimal("449000"));
-        result.setEstimatedSavings(new java.math.BigDecimal("53000"));
-        result.setSavingsPercentage(10.56);
+
+        BigDecimal currentTotal = new BigDecimal("502000");
+        BigDecimal projectedTotal;
+        String explanation;
+
+        // Vary mock result based on what scenario was requested
+        if (params.getServiceShifts() != null && !params.getServiceShifts().isEmpty()) {
+            projectedTotal = new BigDecimal("449000");
+            explanation = buildServiceShiftExplanation(params);
+            result.setCurrentBreakdown(Map.of(
+                    "Transportation", new BigDecimal("420000"),
+                    "Fuel Surcharge", new BigDecimal("58000"),
+                    "Residential", new BigDecimal("24000")
+            ));
+            result.setProjectedBreakdown(Map.of(
+                    "Transportation", new BigDecimal("376000"),
+                    "Fuel Surcharge", new BigDecimal("49000"),
+                    "Residential", new BigDecimal("24000")
+            ));
+        } else if (params.getVolumeChange() != null) {
+            projectedTotal = new BigDecimal("602000");
+            explanation = "Based on the volume change, your projected monthly invoice would increase to approximately $602,000. "
+                    + "Higher volume may qualify you for additional tier discounts — contact your account manager.";
+            result.setCurrentBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Residential", new BigDecimal("24000")));
+            result.setProjectedBreakdown(Map.of("Transportation", new BigDecimal("504000"), "Fuel Surcharge", new BigDecimal("70000"), "Residential", new BigDecimal("28000")));
+        } else if (params.getFuelChange() != null) {
+            projectedTotal = new BigDecimal("518000");
+            explanation = "With the projected fuel price change, your fuel surcharge component would increase, "
+                    + "raising the monthly invoice by approximately $16,000.";
+            result.setCurrentBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Residential", new BigDecimal("24000")));
+            result.setProjectedBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("74000"), "Residential", new BigDecimal("24000")));
+        } else if (params.getDeliveryTypeChange() != null) {
+            projectedTotal = new BigDecimal("486000");
+            explanation = "Reducing residential deliveries would lower your Residential Surcharge exposure, "
+                    + "saving approximately $16,000 per month.";
+            result.setCurrentBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Residential", new BigDecimal("24000")));
+            result.setProjectedBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Residential", new BigDecimal("8000")));
+        } else if (params.getAccessorialChanges() != null && !params.getAccessorialChanges().isEmpty()) {
+            projectedTotal = new BigDecimal("478000");
+            explanation = "Eliminating the specified surcharge exposure could save approximately $24,000 per month.";
+            result.setCurrentBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Accessorials", new BigDecimal("24000")));
+            result.setProjectedBreakdown(Map.of("Transportation", new BigDecimal("420000"), "Fuel Surcharge", new BigDecimal("58000"), "Accessorials", new BigDecimal("0")));
+        } else {
+            projectedTotal = new BigDecimal("449000");
+            explanation = "Based on your scenario, the projected monthly invoice could decrease by approximately $53,000.";
+        }
+
+        result.setCurrentInvoiceTotal(currentTotal);
+        result.setProjectedInvoiceTotal(projectedTotal);
+        result.setEstimatedSavings(currentTotal.subtract(projectedTotal));
+        result.setSavingsPercentage(currentTotal.subtract(projectedTotal)
+                .multiply(new BigDecimal("100"))
+                .divide(currentTotal, 2, java.math.RoundingMode.HALF_UP)
+                .doubleValue());
         result.setConfidenceLevel("MEDIUM");
-        result.setExplanation("Based on your scenario, the projected monthly invoice could decrease by approximately $53,000. "
-                + "This is a projection based on historical patterns and is not a final quote.");
+        result.setExplanation(explanation + " This is a projection based on historical patterns and is not a final quote.");
+
         return result;
+    }
+
+    private String buildServiceShiftExplanation(SimulationParameters params) {
+        ServiceShift shift = params.getServiceShifts().get(0);
+        return String.format("Shifting %s%% of %s shipments to %s could reduce your projected monthly cost by approximately $53,000. "
+                        + "The savings come from lower base transportation rates and reduced fuel surcharge exposure.",
+                shift.getPercentage() != null ? shift.getPercentage().intValue() : "some",
+                shift.getFromService() != null ? shift.getFromService() : "current service",
+                shift.getToService() != null ? shift.getToService() : "target service");
     }
 }
