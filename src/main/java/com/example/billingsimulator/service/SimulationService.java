@@ -1,8 +1,8 @@
 package com.example.billingsimulator.service;
 
-import com.example.billingsimulator.dto.LineItem;
-import com.example.billingsimulator.dto.RateSimulationRequest;
-import com.example.billingsimulator.dto.RateSimulationResponse;
+import com.example.billingsimulator.model.LineItem;
+import com.example.billingsimulator.model.RateSimulationRequest;
+import com.example.billingsimulator.model.RateSimulationResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
 import com.example.billingsimulator.exception.RateNotFoundException;

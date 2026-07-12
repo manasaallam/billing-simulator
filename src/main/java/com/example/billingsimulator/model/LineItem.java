@@ -1,4 +1,4 @@
-package com.example.billingsimulator.dto;
+package com.example.billingsimulator.model;
 
 import java.math.BigDecimal;
 

@@ -1,4 +1,4 @@
-package com.example.billingsimulator.dto;
+package com.example.billingsimulator.model;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

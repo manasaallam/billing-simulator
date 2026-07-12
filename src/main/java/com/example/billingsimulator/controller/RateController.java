@@ -1,7 +1,7 @@
 package com.example.billingsimulator.controller;
 
-import com.example.billingsimulator.dto.RateQuoteRequest;
-import com.example.billingsimulator.dto.RateQuoteResponse;
+import com.example.billingsimulator.model.RateQuoteRequest;
+import com.example.billingsimulator.model.RateQuoteResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
 import com.example.billingsimulator.model.BaselineSnapshot;

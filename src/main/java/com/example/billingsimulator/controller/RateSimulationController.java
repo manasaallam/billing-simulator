@@ -1,7 +1,7 @@
 package com.example.billingsimulator.controller;
 
-import com.example.billingsimulator.dto.RateSimulationRequest;
-import com.example.billingsimulator.dto.RateSimulationResponse;
+import com.example.billingsimulator.model.RateSimulationRequest;
+import com.example.billingsimulator.model.RateSimulationResponse;
 import com.example.billingsimulator.exception.InvalidInputException;
 import com.example.billingsimulator.service.SimulationService;
 import jakarta.validation.Valid;

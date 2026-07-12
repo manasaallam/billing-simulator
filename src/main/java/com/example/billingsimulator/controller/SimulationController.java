@@ -1,8 +1,8 @@
 package com.example.billingsimulator.controller;
 
 import com.example.billingsimulator.model.*;
-import com.example.billingsimulator.dto.RateSimulationRequest;
-import com.example.billingsimulator.dto.RateSimulationResponse;
+import com.example.billingsimulator.model.RateSimulationRequest;
+import com.example.billingsimulator.model.RateSimulationResponse;
 import com.example.billingsimulator.service.ParameterExtractionService;
 import com.example.billingsimulator.service.ParameterValidationService;
 import com.example.billingsimulator.service.SimulationService;
