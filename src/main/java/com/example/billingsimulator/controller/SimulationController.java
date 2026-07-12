@@ -1,8 +1,10 @@
 package com.example.billingsimulator.controller;
 
+import com.example.billingsimulator.dto.AIResponse;
 import com.example.billingsimulator.dto.SimulationRequest;
 import com.example.billingsimulator.dto.SimulationRequestDto;
 import com.example.billingsimulator.service.GroqService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,10 +21,13 @@ public class SimulationController {
     }
 
     @PostMapping
-    public SimulationRequest simulate(@RequestBody SimulationRequestDto request) throws Exception {
+    public ResponseEntity<?> simulate(@RequestBody SimulationRequestDto request) throws Exception {
 
-        return groqService.extractParameters(request.question());
+        AIResponse response = groqService.extractParameters(
+                request.conversationId(),
+                request.question()
+        );
 
+        return ResponseEntity.ok(response);
     }
 }
-
