@@ -1,7 +1,7 @@
 package com.example.billingsimulator.controller;
 
-import com.example.billingsimulator.dto.SimulationRequest;
-import com.example.billingsimulator.dto.SimulationResponse;
+import com.example.billingsimulator.dto.RateSimulationRequest;
+import com.example.billingsimulator.dto.RateSimulationResponse;
 import com.example.billingsimulator.exception.InvalidInputException;
 import com.example.billingsimulator.service.SimulationService;
 import jakarta.validation.Valid;
@@ -26,11 +26,11 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/rate/simulate")
-public class SimulationController {
+public class RateSimulationController {
 
     private final SimulationService simulationService;
 
-    public SimulationController(SimulationService simulationService) {
+    public RateSimulationController(SimulationService simulationService) {
         this.simulationService = simulationService;
     }
 
@@ -39,7 +39,7 @@ public class SimulationController {
      * This is the only endpoint the AI needs to know about for simulations.
      */
     @PostMapping
-    public ResponseEntity<SimulationResponse> dispatch(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> dispatch(@Valid @RequestBody RateSimulationRequest request) {
         if (request.getScenarioType() == null || request.getScenarioType().isBlank()) {
             throw new InvalidInputException(
                     "scenarioType is required. Valid values: VOLUME_CHANGE, SERVICE_SHIFT, " +
@@ -53,55 +53,55 @@ public class SimulationController {
     // -----------------------------------------------------------------------
 
     @PostMapping("/volume-change")
-    public ResponseEntity<SimulationResponse> volumeChange(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> volumeChange(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("VOLUME_CHANGE");
         return ResponseEntity.ok(simulationService.volumeChange(request));
     }
 
     @PostMapping("/service-shift")
-    public ResponseEntity<SimulationResponse> serviceShift(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> serviceShift(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("SERVICE_SHIFT");
         return ResponseEntity.ok(simulationService.serviceShift(request));
     }
 
     @PostMapping("/package-profile")
-    public ResponseEntity<SimulationResponse> packageProfile(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> packageProfile(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("PACKAGE_PROFILE");
         return ResponseEntity.ok(simulationService.packageProfile(request));
     }
 
     @PostMapping("/zone-mix")
-    public ResponseEntity<SimulationResponse> zoneMix(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> zoneMix(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("ZONE_MIX");
         return ResponseEntity.ok(simulationService.zoneMix(request));
     }
 
     @PostMapping("/accessorial")
-    public ResponseEntity<SimulationResponse> accessorial(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> accessorial(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("ACCESSORIAL");
         return ResponseEntity.ok(simulationService.accessorialChange(request));
     }
 
     @PostMapping("/fuel-change")
-    public ResponseEntity<SimulationResponse> fuelChange(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> fuelChange(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("FUEL_CHANGE");
         return ResponseEntity.ok(simulationService.fuelChange(request));
     }
 
     @PostMapping("/combined")
-    public ResponseEntity<SimulationResponse> combined(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> combined(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("COMBINED");
         return ResponseEntity.ok(simulationService.combined(request));
     }
 
     @PostMapping("/optimize")
-    public ResponseEntity<SimulationResponse> optimize(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> optimize(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("OPTIMIZE");
         return ResponseEntity.ok(simulationService.optimize(request));
     }
 
     @PostMapping("/compare")
-    public ResponseEntity<SimulationResponse> compare(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> compare(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("COMPARE");
         return ResponseEntity.ok(simulationService.compare(request));
     }
@@ -120,64 +120,64 @@ public class SimulationController {
  */
 @RestController
 @RequestMapping("/api/simulate")
-public class SimulationController {
+public class RateSimulationController {
 
     private final SimulationService simulationService;
 
-    public SimulationController(SimulationService simulationService) {
+    public RateSimulationController(SimulationService simulationService) {
         this.simulationService = simulationService;
     }
 
     @PostMapping("/volume-change")
-    public ResponseEntity<SimulationResponse> volumeChange(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> volumeChange(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("VOLUME_CHANGE");
         return ResponseEntity.ok(simulationService.volumeChange(request));
     }
 
     @PostMapping("/service-shift")
-    public ResponseEntity<SimulationResponse> serviceShift(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> serviceShift(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("SERVICE_SHIFT");
         return ResponseEntity.ok(simulationService.serviceShift(request));
     }
 
     @PostMapping("/package-profile")
-    public ResponseEntity<SimulationResponse> packageProfile(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> packageProfile(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("PACKAGE_PROFILE");
         return ResponseEntity.ok(simulationService.packageProfile(request));
     }
 
     @PostMapping("/zone-mix")
-    public ResponseEntity<SimulationResponse> zoneMix(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> zoneMix(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("ZONE_MIX");
         return ResponseEntity.ok(simulationService.zoneMix(request));
     }
 
     @PostMapping("/accessorial")
-    public ResponseEntity<SimulationResponse> accessorial(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> accessorial(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("ACCESSORIAL");
         return ResponseEntity.ok(simulationService.accessorialChange(request));
     }
 
     @PostMapping("/fuel-change")
-    public ResponseEntity<SimulationResponse> fuelChange(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> fuelChange(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("FUEL_CHANGE");
         return ResponseEntity.ok(simulationService.fuelChange(request));
     }
 
     @PostMapping("/combined")
-    public ResponseEntity<SimulationResponse> combined(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> combined(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("COMBINED");
         return ResponseEntity.ok(simulationService.combined(request));
     }
 
     @PostMapping("/optimize")
-    public ResponseEntity<SimulationResponse> optimize(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> optimize(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("OPTIMIZE");
         return ResponseEntity.ok(simulationService.optimize(request));
     }
 
     @PostMapping("/compare")
-    public ResponseEntity<SimulationResponse> compare(@Valid @RequestBody SimulationRequest request) {
+    public ResponseEntity<RateSimulationResponse> compare(@Valid @RequestBody RateSimulationRequest request) {
         request.setScenarioType("COMPARE");
         return ResponseEntity.ok(simulationService.compare(request));
     }

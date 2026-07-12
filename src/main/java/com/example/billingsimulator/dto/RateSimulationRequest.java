@@ -11,7 +11,7 @@ import java.util.Map;
  * scenarioType drives which SimulationService method is invoked.
  * Only the fields relevant to the chosen scenario need to be populated.
  */
-public class SimulationRequest {
+public class RateSimulationRequest {
 
     // ---- Common -------------------------------------------------------
     @NotBlank(message = "contractId is required")
@@ -69,12 +69,12 @@ public class SimulationRequest {
 
     public static class NamedScenario {
         private String label;
-        private SimulationRequest request;
+        private RateSimulationRequest request;
 
         public String getLabel() { return label; }
         public void setLabel(String label) { this.label = label; }
-        public SimulationRequest getRequest() { return request; }
-        public void setRequest(SimulationRequest request) { this.request = request; }
+        public RateSimulationRequest getRequest() { return request; }
+        public void setRequest(RateSimulationRequest request) { this.request = request; }
     }
 
     // Getters & setters

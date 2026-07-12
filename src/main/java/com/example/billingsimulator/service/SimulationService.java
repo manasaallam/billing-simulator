@@ -1,8 +1,8 @@
 package com.example.billingsimulator.service;
 
 import com.example.billingsimulator.dto.LineItem;
-import com.example.billingsimulator.dto.SimulationRequest;
-import com.example.billingsimulator.dto.SimulationResponse;
+import com.example.billingsimulator.dto.RateSimulationRequest;
+import com.example.billingsimulator.dto.RateSimulationResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
 import com.example.billingsimulator.exception.RateNotFoundException;
@@ -24,7 +24,7 @@ import java.util.*;
  *  2. Reads the relevant metrics from metrics_json
  *  3. Applies the scenario change (volume, service mix, weight, zone mix, etc.)
  *  4. Calls RateEngineService helpers to recompute discount / transport cost
- *  5. Returns a SimulationResponse with baseline vs projected cost delta
+ *  5. Returns a RateSimulationResponse with baseline vs projected cost delta
  *
  * All monetary values are computed here — the AI layer only phrases the answer.
  */
@@ -62,7 +62,7 @@ public class SimulationService {
     // "What if I ship 35 packages a week instead of 20?"
     // Impact: may cross a tier band → lower discount → lower net transport
     // -----------------------------------------------------------------------
-    public SimulationResponse volumeChange(SimulationRequest req) {
+    public RateSimulationResponse volumeChange(RateSimulationRequest req) {
         Contract contract = loadContract(req.getContractId());
         BaselineSnapshot baseline = loadBaseline(req);
         if (req.getNewWeeklyVolume() == null || req.getNewWeeklyVolume() <= 0) {
@@ -117,7 +117,7 @@ public class SimulationService {
         DiscountTier newTier = discountTierRepo.findTier(
                 contract.getProgramId(), primaryCategory, newVolume).orElse(null);
 
-        SimulationResponse resp = buildBaseResponse(req, baseline, contract, "VOLUME_CHANGE");
+        RateSimulationResponse resp = buildBaseResponse(req, baseline, contract, "VOLUME_CHANGE");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -145,7 +145,7 @@ public class SimulationService {
     // Scenario: SERVICE_SHIFT
     // "What if I move 30% of my GROUND shipments to THREE_DAY?"
     // -----------------------------------------------------------------------
-    public SimulationResponse serviceShift(SimulationRequest req) {
+    public RateSimulationResponse serviceShift(RateSimulationRequest req) {
         if (req.getFromService() == null || req.getToService() == null) {
             throw new InvalidInputException("fromService and toService are required for SERVICE_SHIFT");
         }
@@ -199,7 +199,7 @@ public class SimulationService {
                 req.getToService() + " (shifted portion — baseline cost)",
                 shiftedCost, projectedShiftedCost));
 
-        SimulationResponse resp = buildBaseResponse(req, baseline, contract, "SERVICE_SHIFT");
+        RateSimulationResponse resp = buildBaseResponse(req, baseline, contract, "SERVICE_SHIFT");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -215,7 +215,7 @@ public class SimulationService {
     // "What if average package weight increases to 15 lbs?"
     // Impact: heavier packages → higher rate band → higher base rate
     // -----------------------------------------------------------------------
-    public SimulationResponse packageProfile(SimulationRequest req) {
+    public RateSimulationResponse packageProfile(RateSimulationRequest req) {
         if (req.getNewAvgWeightLb() == null) {
             throw new InvalidInputException("newAvgWeightLb is required for PACKAGE_PROFILE");
         }
@@ -238,7 +238,7 @@ public class SimulationService {
         BigDecimal projectedTransport = transportCost.multiply(weightRatio).setScale(SCALE, HALF_UP);
         BigDecimal projectedAnnual = projectedTransport.add(nonTransport).setScale(SCALE, HALF_UP);
 
-        SimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "PACKAGE_PROFILE");
+        RateSimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "PACKAGE_PROFILE");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -257,7 +257,7 @@ public class SimulationService {
     // Scenario: ZONE_MIX
     // "What if 40% of my shipments go to zone 8 instead of 20%?"
     // -----------------------------------------------------------------------
-    public SimulationResponse zoneMix(SimulationRequest req) {
+    public RateSimulationResponse zoneMix(RateSimulationRequest req) {
         if (req.getZoneDistribution() == null || req.getZoneDistribution().isEmpty()) {
             throw new InvalidInputException("zoneDistribution is required for ZONE_MIX");
         }
@@ -286,7 +286,7 @@ public class SimulationService {
         BigDecimal projectedTransport = transportCost.multiply(zoneRatio).setScale(SCALE, HALF_UP);
         BigDecimal projectedAnnual = projectedTransport.add(nonTransport).setScale(SCALE, HALF_UP);
 
-        SimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "ZONE_MIX");
+        RateSimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "ZONE_MIX");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -302,7 +302,7 @@ public class SimulationService {
     // Scenario: ACCESSORIAL
     // "What if all my packages stop being residential deliveries?"
     // -----------------------------------------------------------------------
-    public SimulationResponse accessorialChange(SimulationRequest req) {
+    public RateSimulationResponse accessorialChange(RateSimulationRequest req) {
         BaselineSnapshot baseline = loadBaseline(req);
         Map<String, Object> metrics = parseMetrics(baseline.getMetricsJson());
         BigDecimal annualCost = baseline.getTotalCost();
@@ -339,7 +339,7 @@ public class SimulationService {
 
         BigDecimal projectedAnnual = annualCost.add(accessorialDelta).setScale(SCALE, HALF_UP);
 
-        SimulationResponse resp = buildBaseResponse(req, contract, baseline, "ACCESSORIAL");
+        RateSimulationResponse resp = buildBaseResponse(req, contract, baseline, "ACCESSORIAL");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -354,7 +354,7 @@ public class SimulationService {
     // Scenario: FUEL_CHANGE
     // "What if the fuel surcharge goes to 18%?"
     // -----------------------------------------------------------------------
-    public SimulationResponse fuelChange(SimulationRequest req) {
+    public RateSimulationResponse fuelChange(RateSimulationRequest req) {
         if (req.getHypotheticalFuelPct() == null) {
             throw new InvalidInputException("hypotheticalFuelPct is required for FUEL_CHANGE");
         }
@@ -382,7 +382,7 @@ public class SimulationService {
         BigDecimal nonTransport = annualCost.subtract(transportCost);
         BigDecimal projectedAnnual = netTransport.add(newFuelCharge).add(nonTransport).setScale(SCALE, HALF_UP);
 
-        SimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "FUEL_CHANGE");
+        RateSimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "FUEL_CHANGE");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -400,13 +400,13 @@ public class SimulationService {
     // Scenario: COMBINED
     // Apply any combination of volume + service shift + package profile at once
     // -----------------------------------------------------------------------
-    public SimulationResponse combined(SimulationRequest req) {
+    public RateSimulationResponse combined(RateSimulationRequest req) {
         BigDecimal annualCost = loadBaseline(req).getTotalCost();
         BigDecimal running = annualCost;
 
         // Apply volume change first (tier shift has the biggest impact)
         if (req.getNewWeeklyVolume() != null) {
-            SimulationResponse volResp = volumeChange(req);
+            RateSimulationResponse volResp = volumeChange(req);
             running = volResp.getProjectedAnnualCost();
         }
         // Apply package weight change on top
@@ -431,7 +431,7 @@ public class SimulationService {
         }
 
         BaselineSnapshot baseline = loadBaseline(req);
-        SimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "COMBINED");
+        RateSimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "COMBINED");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -447,7 +447,7 @@ public class SimulationService {
     // Scenario: OPTIMIZE
     // "How much more would I need to ship to hit the next discount tier?"
     // -----------------------------------------------------------------------
-    public SimulationResponse optimize(SimulationRequest req) {
+    public RateSimulationResponse optimize(RateSimulationRequest req) {
         Contract contract = loadContract(req.getContractId());
         BaselineSnapshot baseline = loadBaseline(req);
         int currentVolume = baseline.getAvgWeeklyVolume().intValue();
@@ -455,7 +455,7 @@ public class SimulationService {
         Map<String, Object> metrics = parseMetrics(baseline.getMetricsJson());
         Map<String, BigDecimal> spendByService = getSpendByService(metrics);
 
-        List<SimulationResponse.OptimizationHint> hints = new ArrayList<>();
+        List<RateSimulationResponse.OptimizationHint> hints = new ArrayList<>();
 
         // For each service category in the baseline, compute the next tier threshold
         Set<String> seenCategories = new LinkedHashSet<>();
@@ -500,7 +500,7 @@ public class SimulationService {
                     categoryCost, currentTier.getDiscountPct(), nextTier.getDiscountPct());
             BigDecimal annualSavings = categoryCost.subtract(projectedCost).setScale(SCALE, HALF_UP);
 
-            SimulationResponse.OptimizationHint hint = new SimulationResponse.OptimizationHint();
+            RateSimulationResponse.OptimizationHint hint = new RateSimulationResponse.OptimizationHint();
             hint.setCategory(category);
             hint.setCurrentVolume(currentVolume);
             hint.setNextTierVolume(volumeNeeded);
@@ -510,7 +510,7 @@ public class SimulationService {
             hints.add(hint);
         }
 
-        SimulationResponse resp = buildBaseResponse(req, contract, baseline, "OPTIMIZE");
+        RateSimulationResponse resp = buildBaseResponse(req, contract, baseline, "OPTIMIZE");
         resp.setBaselineAnnualCost(baseline.getTotalCost());
         resp.setBaselineWeeklyCost(baseline.getTotalCost().divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -526,16 +526,16 @@ public class SimulationService {
     // Scenario: COMPARE
     // Run multiple named sub-scenarios and return side-by-side
     // -----------------------------------------------------------------------
-    public SimulationResponse compare(SimulationRequest req) {
+    public RateSimulationResponse compare(RateSimulationRequest req) {
         if (req.getCompareScenarios() == null || req.getCompareScenarios().isEmpty()) {
             throw new InvalidInputException("compareScenarios list is required for COMPARE");
         }
 
         BaselineSnapshot baseline = loadBaseline(req);
         BigDecimal annualCost = baseline.getTotalCost();
-        List<SimulationResponse.CompareEntry> entries = new ArrayList<>();
+        List<RateSimulationResponse.CompareEntry> entries = new ArrayList<>();
 
-        for (SimulationRequest.NamedScenario ns : req.getCompareScenarios()) {
+        for (RateSimulationRequest.NamedScenario ns : req.getCompareScenarios()) {
             if (ns.getRequest() == null) continue;
             // Inherit contractId and baselineId from parent if not set
             if (ns.getRequest().getContractId() == null) {
@@ -544,8 +544,8 @@ public class SimulationService {
             if (ns.getRequest().getBaselineId() == null) {
                 ns.getRequest().setBaselineId(req.getBaselineId());
             }
-            SimulationResponse subResp = dispatch(ns.getRequest());
-            SimulationResponse.CompareEntry entry = new SimulationResponse.CompareEntry();
+            RateSimulationResponse subResp = dispatch(ns.getRequest());
+            RateSimulationResponse.CompareEntry entry = new RateSimulationResponse.CompareEntry();
             entry.setLabel(ns.getLabel());
             entry.setProjectedAnnualCost(subResp.getProjectedAnnualCost());
             entry.setAnnualDelta(subResp.getAnnualDelta());
@@ -553,7 +553,7 @@ public class SimulationService {
             entries.add(entry);
         }
 
-        SimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "COMPARE");
+        RateSimulationResponse resp = buildBaseResponse(req, loadContract(req.getContractId()), baseline, "COMPARE");
         resp.setBaselineAnnualCost(annualCost);
         resp.setBaselineWeeklyCost(annualCost.divide(WEEKS_PER_YEAR, SCALE, HALF_UP));
         resp.setBaselineAvgWeeklyVolume(baseline.getAvgWeeklyVolume());
@@ -565,7 +565,7 @@ public class SimulationService {
     // -----------------------------------------------------------------------
     // Dispatch helper (used by COMPARE internally)
     // -----------------------------------------------------------------------
-    public SimulationResponse dispatch(SimulationRequest req) {
+    public RateSimulationResponse dispatch(RateSimulationRequest req) {
         return switch (req.getScenarioType().toUpperCase()) {
             case "VOLUME_CHANGE"    -> volumeChange(req);
             case "SERVICE_SHIFT"    -> serviceShift(req);
@@ -589,7 +589,7 @@ public class SimulationService {
                 .orElseThrow(() -> new ContractNotFoundException("Contract not found: " + contractId));
     }
 
-    private BaselineSnapshot loadBaseline(SimulationRequest req) {
+    private BaselineSnapshot loadBaseline(RateSimulationRequest req) {
         if (req.getBaselineId() != null && !req.getBaselineId().isBlank()) {
             return baselineRepo.findById(UUID.fromString(req.getBaselineId()))
                     .orElseThrow(() -> new InvalidInputException("Baseline not found: " + req.getBaselineId()));
@@ -704,7 +704,7 @@ public class SimulationService {
         return 1.0;
     }
 
-    private void setDeltas(SimulationResponse resp, BigDecimal baseline, BigDecimal projected) {
+    private void setDeltas(RateSimulationResponse resp, BigDecimal baseline, BigDecimal projected) {
         BigDecimal annualDelta = projected.subtract(baseline).setScale(SCALE, HALF_UP);
         BigDecimal weeklyDelta = annualDelta.divide(WEEKS_PER_YEAR, SCALE, HALF_UP);
         BigDecimal pct = baseline.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
@@ -716,11 +716,11 @@ public class SimulationService {
         resp.setDeltaPct(pct);
     }
 
-    private SimulationResponse buildBaseResponse(SimulationRequest req,
+    private RateSimulationResponse buildBaseResponse(RateSimulationRequest req,
                                                   Contract contract,
                                                   BaselineSnapshot baseline,
                                                   String scenarioType) {
-        SimulationResponse resp = new SimulationResponse();
+        RateSimulationResponse resp = new RateSimulationResponse();
         resp.setScenarioType(scenarioType);
         resp.setContractId(req.getContractId());
         resp.setBaselineId(baseline.getBaselineId().toString());
@@ -729,7 +729,7 @@ public class SimulationService {
         return resp;
     }
 
-    private SimulationResponse buildBaseResponse(SimulationRequest req,
+    private RateSimulationResponse buildBaseResponse(RateSimulationRequest req,
                                                   BaselineSnapshot baseline,
                                                   Contract contract,
                                                   String scenarioType) {

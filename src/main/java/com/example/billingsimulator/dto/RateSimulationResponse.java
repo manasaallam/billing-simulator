@@ -9,7 +9,7 @@ import java.util.Map;
  * All money values are USD computed by the deterministic Java rate engine.
  * The AI layer uses this to phrase the plain-English answer — it never modifies the numbers.
  */
-public class SimulationResponse {
+public class RateSimulationResponse {
 
     private String scenarioType;
     private String contractId;
