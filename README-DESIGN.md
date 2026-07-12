@@ -250,3 +250,51 @@ Seed data → [`database/dml/02_seed_data.sql`](database/dml/02_seed_data.sql)
 | Baseline from 12-month snapshot | Grounds every projection in real customer history |
 | USD only, single account | Hackathon scope — multi-currency and multi-account out of scope |
 | `ddl-auto: none` | Schema managed via Supabase SQL Editor, not Hibernate auto-create |
+
+---
+
+## 12. Branch Integration Checklist
+
+Before merging `feature/parameter-extraction` and `feature/billing-simulation-design` into `master`:
+
+### AI team (`feature/parameter-extraction`) must do:
+
+**1. Update Gemini system prompt — use exact DB codes**
+
+Service codes (replace their human-readable names):
+| Change from | Change to |
+|---|---|
+| `"Ground"` | `"GROUND"` |
+| `"Express"` | `"EXPRESS"` |
+| `"Next Day Air"` | `"EXPRESS"` |
+| `"Express Saver"` | `"EXPRESS_SAVER"` |
+| `"2nd Day Air"` | `"TWO_DAY"` |
+| `"3 Day Select"` | `"THREE_DAY"` |
+| `"Standard"` | `"INTL_STANDARD"` |
+
+Surcharge codes (replace their short codes):
+| Change from | Change to |
+|---|---|
+| `"DAS"` | `"DELIVERY_AREA"` |
+| `"AH"` | `"ADDL_HANDLING"` |
+| `"DS"` | `"DEMAND"` |
+| `"SAT"` | `"SATURDAY"` |
+| `"DV"` | `"DECLARED_VALUE"` |
+| `"PAF"` | `"PREMIUM_AIR"` |
+
+**2. Use `contractId` not `customerId`**
+When calling `/api/rate/simulate`, the field name is `contractId: "CTR-001"`.
+
+**3. Replace `buildMockResult()` with a real call to `/api/rate/simulate`**
+The mock in `SimulationController.java` returns hardcoded `$502K → $449K`.
+Replace it with an HTTP call to `POST /api/rate/simulate` using the validated `SimulationParameters`,
+then map the `SimulationResponse` back into `SimulationResult`.
+
+### Rate engine team (`feature/billing-simulation-design`) must do:
+
+**No changes required.** The URL conflict is already resolved — our endpoints live under `/api/rate/*`.
+
+### Merge is safe when:
+- [ ] AI team prompt outputs exact DB codes
+- [ ] AI team replaced mock with real `/api/rate/simulate` call
+- [ ] Both branches merged into `master` — no `SimulationController` file conflict (different packages/URLs)
