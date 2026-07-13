@@ -3,18 +3,20 @@ package com.ups.billing.dto;
 import com.ups.billing.model.User;
 
 /**
- * Success payload returned to the frontend after signup or login. Never contains
- * the password hash.
+ * Success payload returned to the frontend after signup or login. Includes the
+ * JWT session {@code token}. Never contains the password hash.
  */
 public class AuthResponse {
 
+    private final String token;
     private final String userId;
     private final String accountId;
     private final String name;
     private final String email;
     private final String role;
 
-    public AuthResponse(String userId, String accountId, String name, String email, String role) {
+    public AuthResponse(String token, String userId, String accountId, String name, String email, String role) {
+        this.token = token;
         this.userId = userId;
         this.accountId = accountId;
         this.name = name;
@@ -22,13 +24,18 @@ public class AuthResponse {
         this.role = role;
     }
 
-    public static AuthResponse from(User user) {
+    public static AuthResponse of(User user, String token) {
         return new AuthResponse(
+                token,
                 user.getUserId(),
                 user.getAccountId(),
                 user.getName(),
                 user.getEmail(),
                 user.getRole());
+    }
+
+    public String getToken() {
+        return token;
     }
 
     public String getUserId() {

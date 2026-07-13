@@ -4,3 +4,37 @@ server:
 spring:
   application:
     name: billing-backend
+
+  # Default datasource: H2 in-memory (PostgreSQL compatibility mode). Lets the
+  # backend run fully BEFORE the real Supabase/Postgres connection is wired in.
+  # To use Supabase/Postgres, run with the "supabase" profile and set the
+  # SUPABASE_DB_* environment variables (see application-supabase.yml).
+  datasource:
+    url: jdbc:h2:mem:billing;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# JWT session-token settings. Override the secret in real environments via the
+# JWT_SECRET env var. HS256 requires a secret of at least 32 bytes.
+app:
+  cors:
+    # Comma-separated list of allowed origins for /api/** (Vite dev server).
+    allowed-origins: http://localhost:5173,http://127.0.0.1:5173
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-me-billing-simulator-jwt-secret-0123456789}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+

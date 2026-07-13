@@ -1,0 +1,32 @@
+# Supabase / PostgreSQL profile.
+#
+# Activate with:  --spring.profiles.active=supabase   (or SPRING_PROFILES_ACTIVE=supabase)
+#
+# Supabase -> Project Settings -> Database gives you the host, port, db name,
+# user and password. Use the connection pooler host for app workloads.
+# Provide the values via environment variables (never commit real secrets):
+#
+#   SUPABASE_DB_URL=jdbc:postgresql://<host>:5432/postgres
+#   SUPABASE_DB_USER=postgres
+#   SUPABASE_DB_PASSWORD=<your-db-password>
+
+spring:
+  datasource:
+    url: ${SUPABASE_DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${SUPABASE_DB_USER:postgres}
+    password: ${SUPABASE_DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # Use "update" for early development; switch to "validate" once you manage
+      # the schema with migrations (e.g. Flyway/Liquibase).
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  h2:
+    console:
+      enabled: false

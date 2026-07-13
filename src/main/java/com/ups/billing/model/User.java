@@ -1,21 +1,51 @@
 package com.ups.billing.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
 import java.time.Instant;
 
 /**
- * In-memory representation of a registered user. The {@code passwordHash} is a
- * BCrypt hash and must never be returned to clients.
+ * Persistent representation of a registered user. Mapped to the {@code users}
+ * table via JPA/Hibernate, so it works against H2 today and Supabase/Postgres
+ * once the datasource is wired in. The {@code passwordHash} is a BCrypt hash and
+ * must never be returned to clients.
  */
+@Entity
+@Table(name = "users", uniqueConstraints = @UniqueConstraint(name = "uk_users_email", columnNames = "email"))
 public class User {
 
-    private final String userId;
-    private final String accountId;
-    private final String name;
-    private final String accessKey;
-    private final String email;
-    private final String passwordHash;
-    private final String role;
-    private final Instant createdAt;
+    @Id
+    @Column(name = "user_id", nullable = false, updatable = false)
+    private String userId;
+
+    @Column(name = "account_id", nullable = false)
+    private String accountId;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "access_key", nullable = false)
+    private String accessKey;
+
+    @Column(name = "email", nullable = false)
+    private String email;
+
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+
+    @Column(name = "role", nullable = false)
+    private String role;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    /** Required no-arg constructor for JPA. */
+    protected User() {
+    }
 
     public User(String userId,
                 String accountId,
