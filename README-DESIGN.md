@@ -189,9 +189,9 @@ Every simulation response includes both:
 
 | Field | Value |
 |---|---|
-| Account name | Demo Customer Inc. |
-| Account no | ACCT-1001 |
-| Account ID | `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa` |
+| Company name | Demo Customer Inc. |
+| Access key | `DEMO2026` |
+| Company ID | `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa` |
 | Contract ID | `CTR-001` |
 | Pricing program | Volume-Tiered ("Save as You Grow") |
 | Baseline period | June 2025 – May 2026 |
@@ -207,19 +207,19 @@ Every simulation response includes both:
 
 | Group | Tables |
 |---|---|
-| Account | `account`, `app_user`, `customer_profile` |
+| Identity | `company`, `app_user`, `customer_profile` |
 | Pricing | `pricing_program`, `discount_category`, `discount_tier` |
 | Services | `service_level`, `dim_factor` |
 | Rates | `rate_card`, `zone_matrix`, `min_shipping_charge` |
 | Fuel | `fuel_program`, `fuel_index` |
 | Surcharges | `accessorial_type` |
-| Contract | `contract`, `contract_incentive`, `payment_plan` |
+| Contract | `contract`, `contract_incentive`, `payment_plan`, `payment_plan_company` |
 | Shipments | `shipment`, `shipment_charge` |
 | Baseline | `baseline_snapshot` |
 | Chat | `conversation`, `chat_message` |
 | Scenarios | `simulation_scenario` |
 | Invoice | `invoice`, `invoice_line` |
-| RAG | `knowledge_article` |
+| RAG | `knowledge_article` (pgvector `vector(1536)` + HNSW index) |
 
 Full DDL → [`database/ddl/01_schema.sql`](database/ddl/01_schema.sql)
 Seed data → [`database/dml/02_seed_data.sql`](database/dml/02_seed_data.sql)
