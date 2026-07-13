@@ -49,6 +49,7 @@ public class GeminiAiClient implements AiClient {
         }
         this.webClient = WebClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com/v1beta")
+                .defaultHeader("x-goog-api-key", apiKey)
                 .build();
         log.info("Gemini AI Client configured: model={}", model);
     }
@@ -72,7 +73,7 @@ public class GeminiAiClient implements AiClient {
 
         try {
             String response = webClient.post()
-                    .uri("/models/{model}:generateContent?key={key}", model, apiKey)
+                    .uri("/models/{model}:generateContent", model)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
                     .retrieve()
@@ -104,7 +105,7 @@ public class GeminiAiClient implements AiClient {
 
         try {
             String response = webClient.post()
-                    .uri("/models/{model}:generateContent?key={key}", model, apiKey)
+                    .uri("/models/{model}:generateContent", model)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
                     .retrieve()
@@ -114,6 +115,62 @@ public class GeminiAiClient implements AiClient {
             return extractContent(response);
         } catch (Exception e) {
             log.error("Gemini explanation call failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    @Override
+    public String clarify(String originalQuery, String validationErrors) {
+        log.info("Calling Gemini for clarification questions");
+
+        String systemPrompt = """
+                You are a UPS billing assistant. The customer asked a shipping question but some details are missing or ambiguous.
+                Given their original query and the validation issues, generate helpful clarification questions.
+
+                Return JSON array:
+                [
+                  {
+                    "field": "fieldName",
+                    "question": "Natural, conversational question to ask the customer",
+                    "suggestedOptions": ["option1", "option2", ...]
+                  }
+                ]
+
+                Rules:
+                - Keep questions short, friendly, and specific to what's missing
+                - Provide 3-6 suggested options where applicable
+                - Use plain business language, not technical codes
+                - Maximum 3 questions
+                - Return ONLY valid JSON array
+                """;
+
+        String userMessage = "Original query: " + originalQuery + "\nValidation issues: " + validationErrors;
+
+        Map<String, Object> requestBody = Map.of(
+                "system_instruction", Map.of(
+                        "parts", List.of(Map.of("text", systemPrompt))
+                ),
+                "contents", List.of(
+                        Map.of("parts", List.of(Map.of("text", userMessage)))
+                ),
+                "generationConfig", Map.of(
+                        "temperature", 0.3,
+                        "responseMimeType", "application/json"
+                )
+        );
+
+        try {
+            String response = webClient.post()
+                    .uri("/models/{model}:generateContent", model)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            return extractContent(response);
+        } catch (Exception e) {
+            log.error("Gemini clarification call failed: {}", e.getMessage());
             return null;
         }
     }

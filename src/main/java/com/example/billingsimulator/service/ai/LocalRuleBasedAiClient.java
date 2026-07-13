@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -58,6 +57,12 @@ public class LocalRuleBasedAiClient implements AiClient {
             log.error("Extraction failed", e);
             return "{}";
         }
+    }
+
+    @Override
+    public String clarify(String originalQuery, String validationErrors) {
+        log.info("Local rule-based clarification (passthrough)");
+        return null; // Fall back to hardcoded questions in validation service
     }
 
     @Override

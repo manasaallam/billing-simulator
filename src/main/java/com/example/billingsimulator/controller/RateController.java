@@ -4,7 +4,6 @@ import com.example.billingsimulator.model.RateQuoteRequest;
 import com.example.billingsimulator.model.RateQuoteResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
-import com.example.billingsimulator.model.BaselineSnapshot;
 import com.example.billingsimulator.model.Contract;
 import com.example.billingsimulator.repository.BaselineSnapshotRepository;
 import com.example.billingsimulator.repository.ContractRepository;

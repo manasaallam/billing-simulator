@@ -6,6 +6,8 @@ import com.example.billingsimulator.model.RateSimulationResponse;
 import com.example.billingsimulator.service.ParameterExtractionService;
 import com.example.billingsimulator.service.ParameterValidationService;
 import com.example.billingsimulator.service.SimulationService;
+import com.example.billingsimulator.service.ai.AiClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +41,19 @@ public class SimulationController {
     private final ParameterExtractionService extractionService;
     private final ParameterValidationService validationService;
     private final SimulationService simulationService;
+    private final AiClient aiClient;
+    private final ObjectMapper objectMapper;
 
     public SimulationController(ParameterExtractionService extractionService,
                                 ParameterValidationService validationService,
-                                SimulationService simulationService) {
+                                SimulationService simulationService,
+                                AiClient aiClient,
+                                ObjectMapper objectMapper) {
         this.extractionService = extractionService;
         this.validationService = validationService;
         this.simulationService = simulationService;
+        this.aiClient = aiClient;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -66,7 +74,7 @@ public class SimulationController {
                 params = extractionService.extract(request.getNaturalLanguageQuery());
             }
 
-            return ResponseEntity.ok(validateAndSimulate(params, conversationId, request.getContractId()));
+            return ResponseEntity.ok(validateAndSimulate(params, conversationId, request.getContractId(), request.getNaturalLanguageQuery()));
 
         } catch (Exception e) {
             log.error("Simulation failed", e);
@@ -99,9 +107,14 @@ public class SimulationController {
     }
 
     private SimulationResponse validateAndSimulate(SimulationParameters params, String conversationId, String contractId) {
+        return validateAndSimulate(params, conversationId, contractId, null);
+    }
+
+    private SimulationResponse validateAndSimulate(SimulationParameters params, String conversationId, String contractId, String originalQuery) {
         List<ClarificationQuestion> questions = validationService.validate(params);
         if (!questions.isEmpty()) {
             log.info("Clarification needed: {} question(s)", questions.size());
+            questions = enrichWithAi(questions, originalQuery);
             return SimulationResponse.needsClarification(questions, conversationId);
         }
 
@@ -111,6 +124,32 @@ public class SimulationController {
         SimulationResult result = mapToResult(rateResp);
         result.setExplanation(extractionService.explainResult(rateResp));
         return SimulationResponse.success(result, conversationId);
+    }
+
+    /**
+     * Use Gemini to generate more natural, contextual clarification questions.
+     * Falls back to the hardcoded questions if AI call fails.
+     */
+    private List<ClarificationQuestion> enrichWithAi(List<ClarificationQuestion> fallbackQuestions, String originalQuery) {
+        if (originalQuery == null || originalQuery.isBlank()) {
+            return fallbackQuestions;
+        }
+        try {
+            String validationErrors = objectMapper.writeValueAsString(fallbackQuestions);
+            String aiResponse = aiClient.clarify(originalQuery, validationErrors);
+            if (aiResponse == null || aiResponse.isBlank()) {
+                return fallbackQuestions;
+            }
+            List<ClarificationQuestion> aiQuestions = objectMapper.readValue(aiResponse,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, ClarificationQuestion.class));
+            if (aiQuestions != null && !aiQuestions.isEmpty()) {
+                log.info("Using AI-generated clarification questions: {}", aiQuestions.size());
+                return aiQuestions;
+            }
+        } catch (Exception e) {
+            log.warn("AI clarification failed, using hardcoded questions: {}", e.getMessage());
+        }
+        return fallbackQuestions;
     }
 
     // --- Mapper: AI params → Rate engine request ---
