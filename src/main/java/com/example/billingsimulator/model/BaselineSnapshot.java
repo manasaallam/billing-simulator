@@ -34,7 +34,8 @@ public class BaselineSnapshot {
     // JSONB stored as text — parsed by SimulationService with ObjectMapper.
     // Structure: { weekly_volume_avg, spend_by_service, spend_by_zone,
     //              avg_weight_lbs, residential_pct, accessorial_pct }
-    @Column(name = "metrics_json", columnDefinition = "jsonb")
+    // Note: columnDefinition intentionally omitted — Postgres DDL uses jsonb (see database/ddl/01_schema.sql)
+    @Column(name = "metrics_json")
     private String metricsJson;
 
     public UUID getBaselineId() { return baselineId; }

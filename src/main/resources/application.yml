@@ -18,14 +18,21 @@ spring:
   #   url:  jdbc:postgresql://db.<project-ref>.supabase.co:5432/postgres?sslmode=require
   #   user: postgres
   datasource:
-    url: jdbc:postgresql://db.eufqlrsyxjbgyyxwntke.supabase.co:5432/postgres?sslmode=require
+    # Supabase connection pooler (port 6543) — works where direct port 5432 is blocked.
+    # Direct connection: jdbc:postgresql://db.eufqlrsyxjbgyyxwntke.supabase.co:5432/postgres?sslmode=require
+    url: jdbc:postgresql://db.eufqlrsyxjbgyyxwntke.supabase.co:6543/postgres?sslmode=require&pgbouncer=true
     username: postgres
     password: SSIWt4eKey1xiSpB
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
+      connection-timeout: 10000
+      initialization-fail-timeout: 10000
 
   jpa:
+    # Dialect set explicitly so Hibernate does not need a live connection at startup
+    # to auto-detect it (avoids NullPointerException when Supabase is unreachable).
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # Schema is managed by the standalone scripts in /database (run in Supabase),
       # so Hibernate must NOT create or alter tables.
