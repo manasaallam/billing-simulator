@@ -21,13 +21,18 @@ public class SimulationController {
     }
 
     @PostMapping
-    public ResponseEntity<?> simulate(@RequestBody SimulationRequestDto request) throws Exception {
+    public ResponseEntity<?> simulate(@RequestBody SimulationRequestDto request)
+            throws Exception {
 
         AIResponse response = groqService.extractParameters(
                 request.conversationId(),
-                request.question()
-        );
+                request.question());
 
+        if ("NEEDS_MORE_INFORMATION".equals(response.getStatus())) {
+            return ResponseEntity.ok(response);
+        }
+
+        // Phase 2: Call billing simulator here
         return ResponseEntity.ok(response);
     }
 }

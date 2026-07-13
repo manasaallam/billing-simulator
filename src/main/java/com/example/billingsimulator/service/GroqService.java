@@ -97,7 +97,22 @@ public class GroqService {
         System.out.println("==================================");
         System.out.println(content);
         System.out.println("==================================");
+
         AIResponse aiResponse = mapper.readValue(content, AIResponse.class);
+
+       // Handle informational requests immediately
+        if ("NOT_A_SIMULATION_REQUEST".equals(aiResponse.getStatus())) {
+
+            System.out.println("Informational request detected. Skipping validation.");
+
+            // Clear any existing conversation for this conversationId
+            conversationService.remove(conversationId);
+
+            return aiResponse;
+        }
+
+        // Continue with validation for simulation requests
+        aiResponse = simulationValidator.validate(question, aiResponse);
         aiResponse =
                 simulationValidator.validate(question, aiResponse);
 
@@ -124,10 +139,9 @@ public class GroqService {
             }
 
             conversationService.save(conversationId, conversationText);
-            System.out.println("Conversation Saved:");
-            System.out.println(conversationService.get(conversationId));
 
-        } else {
+        }
+        else {
 
             System.out.println("Removing conversation : " + conversationId);
             conversationService.remove(conversationId);

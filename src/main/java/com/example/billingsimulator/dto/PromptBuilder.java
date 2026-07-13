@@ -26,6 +26,66 @@ public final class PromptBuilder {
                                   9. If one or more required fields are missing, return status = "NEEDS_MORE_INFORMATION".
                                   10. Return only one of the JSON schemas defined below.
                 
+                                  ====================================================
+                                  INTENT DETECTION
+                                  ====================================================
+                
+                                  First determine whether the customer's question is requesting a billing simulation.
+                
+                                  A billing simulation request asks to change, increase, decrease, move, shift, transfer, modify, or simulate something.
+                
+                                  If the customer is only asking for:
+                
+                                  - an explanation
+                                  - a definition
+                                  - information
+                                  - documentation
+                                  - help
+                                  - guidance
+                                  - recommendations
+                                  - strategies
+                                  - best practices
+                                  - examples
+                                  - how something works
+                
+                                  then it is NOT a billing simulation request.
+                
+                                  Return:
+                
+                                  {
+                                    "status":"NOT_A_SIMULATION_REQUEST",
+                                    "message":"The question is informational and is not requesting a billing simulation.",
+                                    "simulationRequest":null,
+                                    "missingFields":null
+                                  }
+                
+                If the customer's primary intent is to ask for an explanation, definition,
+                documentation, guidance, or information, return
+                NOT_A_SIMULATION_REQUEST even if the sentence contains words like
+                "increase", "decrease", "move", or percentages.
+                
+                Examples:
+                
+                Question:
+                
+                Explain fuel surcharge increase by 10%.
+                
+                Output:
+                NOT_A_SIMULATION_REQUEST
+                
+                Question:
+                Increase fuel surcharge by 10%.
+                
+                Output:
+                READY
+                
+                If the customer is asking for recommendations, strategies,
+                guidance, best practices, or consulting advice, do NOT create a
+                billing simulation even if percentages or scenario keywords appear.
+                
+                Return:
+                
+                status = NOT_A_SIMULATION_RE
                                   ==============================
                                   SCENARIO TYPES
                                   ==============================
@@ -188,6 +248,27 @@ public final class PromptBuilder {
                                   Populate
                 
                                   percentage
+                
+                                  Absolute volume changes:
+                
+                                  Examples:
+                
+                                  - Increase shipment volume from 1000 to 2000
+                                  - Increase shipments from 500 to 700
+                                  - Increase daily shipment volume from 1000 to 1500 packages
+                
+                                  Populate:
+                
+                                  - currentVolume
+                                  - newVolume
+                                  - volumeUnit
+                
+                                  Rules:
+                
+                                  - If the customer provides currentVolume and newVolume, do NOT ask for percentage.
+                                  - If the customer mentions "shipment volume" or "shipments" but does not specify a unit, set volumeUnit = "SHIPMENTS".
+                                  - If the customer explicitly mentions a unit (packages, pallets, cartons, etc.), populate volumeUnit with that value.
+                                  - Return READY when currentVolume and newVolume are available.
                 
                                   ==============================
                                   REQUIRED FIELDS
@@ -470,6 +551,50 @@ public final class PromptBuilder {
                     "fuelIncrease":-5,
                     "effectivePeriod":null
                   }
+                }
+                Question:
+                Explain fuel surcharge.
+                
+                Output:
+                
+                {
+                  "status":"NOT_A_SIMULATION_REQUEST",
+                  "message":"The question is informational and is not requesting a billing simulation.",
+                  "simulationRequest":null,
+                  "missingFields":null
+                }
+                Question:
+                What is fuel surcharge?
+                
+                Output:
+                
+                {
+                  "status":"NOT_A_SIMULATION_REQUEST",
+                  "message":"The question is informational and is not requesting a billing simulation.",
+                  "simulationRequest":null,
+                  "missingFields":null
+                }
+                Question:
+                How does UPS Ground work?
+                
+                Output:
+                
+                {
+                  "status":"NOT_A_SIMULATION_REQUEST",
+                  "message":"The question is informational and is not requesting a billing simulation.",
+                  "simulationRequest":null,
+                  "missingFields":null
+                }
+                Question:
+                What strategies can reduce shipping costs?
+                
+                Output:
+                
+                {
+                  "status":"NOT_A_SIMULATION_REQUEST",
+                  "message":"The question is informational and is not requesting a billing simulation.",
+                  "simulationRequest":null,
+                  "missingFields":null
                 }
                                   ==============================
                                   Customer Question
