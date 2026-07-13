@@ -546,10 +546,8 @@ public class SimulationService {
 
         for (RateSimulationRequest.NamedScenario ns : req.getCompareScenarios()) {
             if (ns.getRequest() == null) continue;
-            // Inherit contractId and baselineId from parent if not set
-            if (ns.getRequest().getContractId() == null) {
-                ns.getRequest().setContractId(req.getContractId());
-            }
+            // Always force the authenticated user's contractId — never trust user-supplied values in nested requests
+            ns.getRequest().setContractId(req.getContractId());
             if (ns.getRequest().getBaselineId() == null) {
                 ns.getRequest().setBaselineId(req.getBaselineId());
             }
