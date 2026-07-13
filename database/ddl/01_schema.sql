@@ -35,8 +35,7 @@ CREATE TABLE app_user (
     auth_provider_uid VARCHAR(255), -- BCrypt hash (local) or OAuth UID (GCP/Firebase)
     role              VARCHAR(30) NOT NULL DEFAULT 'CUSTOMER', -- CUSTOMER / ADMIN
 
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_login        TIMESTAMPTZ
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_app_user_company ON app_user(company_id);
