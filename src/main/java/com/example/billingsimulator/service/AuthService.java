@@ -60,6 +60,11 @@ public class AuthService {
                 .orElseThrow(() -> new InvalidCredentialsException(
                         "Access key not recognised. Please check with your company administrator."));
 
+        if (!"ACTIVE".equalsIgnoreCase(company.getStatus())) {
+            throw new InvalidCredentialsException(
+                    "This company account is inactive. Please contact your administrator.");
+        }
+
         AppUser user = new AppUser();
         user.setUserId(UUID.randomUUID());
         user.setCompanyId(company.getCompanyId());
@@ -84,6 +89,14 @@ public class AuthService {
         AppUser user = appUserRepository.findByEmailIgnoreCase(request.getEmail().trim())
                 .filter(u -> passwordEncoder.matches(request.getPassword(), u.getAuthProviderUid()))
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
+
+        // Reject login if the company has been deactivated.
+        Account company = companyRepository.findById(user.getCompanyId())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password."));
+        if (!"ACTIVE".equalsIgnoreCase(company.getStatus())) {
+            throw new InvalidCredentialsException(
+                    "Your company account is inactive. Please contact your administrator.");
+        }
 
         return AuthResponse.of(user, jwtService.generateToken(user));
     }
