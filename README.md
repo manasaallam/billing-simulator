@@ -2,6 +2,147 @@
 
 Real-time, self-service billing simulation that lets customers explore how shipping decisions impact billing outcomes — powered by Gemini AI for natural-language understanding and business-friendly explanations.
 
+---
+
+## Authentication Backend (current implementation)
+
+> The sections below this one describe the broader product vision. What is
+> actually implemented in this repository today is a minimal **authentication
+> backend** for the React frontend.
+
+- Package root: `com.ups.billing`
+- **No database.** Users are stored in a thread-safe in-memory
+  `ConcurrentHashMap` keyed by email. All data is lost on restart.
+- **Spring Security** is used **only** for `BCryptPasswordEncoder` password
+  hashing — the default security filter chain / login form is disabled.
+- **Port:** `8080`
+- **CORS:** allows the Vite frontend origin `http://localhost:5173`
+  (`POST`, `OPTIONS`, `Content-Type`).
+
+### How to run
+
+```bash
+mvn spring-boot:run
+```
+
+The server starts on `http://localhost:8080`.
+
+#### Seeded demo user
+
+A demo user is seeded on startup so you can log in immediately:
+
+| Field     | Value               |
+|-----------|---------------------|
+| name      | `Demo Customer`     |
+| email     | `demo@customer.com` |
+| password  | `demo1234`          |
+| accessKey | `ACME2026`          |
+| role      | `CUSTOMER`          |
+
+### POST `/api/auth/signup`
+
+Request:
+
+```json
+{
+  "name": "string",
+  "accessKey": "string",
+  "email": "string",
+  "password": "string",
+  "confirmPassword": "string"
+}
+```
+
+Validation (`400` with `fieldErrors`):
+
+- `name` — required, not blank.
+- `accessKey` — required, alphanumeric only (`^[A-Za-z0-9]+$`).
+- `email` — required, valid email format.
+- `password` — required, minimum 8 characters.
+- `confirmPassword` — required, must equal `password`.
+
+Business rules:
+
+- Duplicate email → `409 Conflict`, message
+  `"An account with this email already exists."`
+- Success → `201 Created` with the `AuthResponse` payload (below). The password
+  is BCrypt-hashed and a random `userId` / `accountId` are generated;
+  `role = "CUSTOMER"`.
+
+### POST `/api/auth/login`
+
+Request:
+
+```json
+{ "email": "string", "password": "string" }
+```
+
+Validation (`400` with `fieldErrors`):
+
+- `email` — required, valid email format.
+- `password` — required, not blank.
+
+Business rules:
+
+- Unknown email **or** password mismatch → `401 Unauthorized`, message
+  `"Invalid email or password."` (does not reveal which field is wrong).
+- Success → `200 OK` with the `AuthResponse` payload.
+
+### Success payload (`AuthResponse`)
+
+```json
+{
+  "userId": "...",
+  "accountId": "...",
+  "name": "...",
+  "email": "...",
+  "role": "CUSTOMER"
+}
+```
+
+The password hash is **never** returned.
+
+### Error payload (`ApiError`)
+
+```json
+{
+  "message": "human readable summary",
+  "fieldErrors": { "email": "Enter a valid email address." }
+}
+```
+
+HTTP statuses: `400` validation, `401` bad credentials, `409` duplicate email,
+`500` fallback.
+
+### Example curl commands
+
+Signup:
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ada Lovelace",
+    "accessKey": "ACME2026",
+    "email": "ada@example.com",
+    "password": "supersecret",
+    "confirmPassword": "supersecret"
+  }'
+```
+
+Login (seeded demo user):
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "demo@customer.com",
+    "password": "demo1234"
+  }'
+```
+
+---
+
 ## Architecture
 
 ```
