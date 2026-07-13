@@ -14,7 +14,7 @@ import java.util.Map;
 public class RateSimulationRequest {
 
     // ---- Common -------------------------------------------------------
-    @NotBlank(message = "contractId is required")
+    // Resolved server-side from the authenticated user's contract — do not send in request body.
     private String contractId;
 
     // UUID of the baseline_snapshot to project from.

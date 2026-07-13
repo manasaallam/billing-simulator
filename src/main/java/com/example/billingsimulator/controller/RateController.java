@@ -4,15 +4,18 @@ import com.example.billingsimulator.model.RateQuoteRequest;
 import com.example.billingsimulator.model.RateQuoteResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
-import com.example.billingsimulator.model.Contract;
+import com.example.billingsimulator.model.AppUser;
+import com.example.billingsimulator.repository.AppUserRepository;
 import com.example.billingsimulator.repository.BaselineSnapshotRepository;
 import com.example.billingsimulator.repository.ContractRepository;
 import com.example.billingsimulator.service.RateEngineService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Rate calculation endpoints.
@@ -28,13 +31,16 @@ public class RateController {
     private final RateEngineService rateEngine;
     private final ContractRepository contractRepo;
     private final BaselineSnapshotRepository baselineRepo;
+    private final AppUserRepository userRepo;
 
     public RateController(RateEngineService rateEngine,
                           ContractRepository contractRepo,
-                          BaselineSnapshotRepository baselineRepo) {
+                          BaselineSnapshotRepository baselineRepo,
+                          AppUserRepository userRepo) {
         this.rateEngine = rateEngine;
         this.contractRepo = contractRepo;
         this.baselineRepo = baselineRepo;
+        this.userRepo = userRepo;
     }
 
     /**
@@ -45,10 +51,12 @@ public class RateController {
      * from the account's latest baseline snapshot.
      */
     @PostMapping("/quote")
-    public ResponseEntity<RateQuoteResponse> quote(@Valid @RequestBody RateQuoteRequest request) {
-        int avgWeeklyVolume = resolveAvgWeeklyVolume(request.getContractId());
-        RateQuoteResponse response = rateEngine.quote(request, avgWeeklyVolume);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<RateQuoteResponse> quote(@Valid @RequestBody RateQuoteRequest request,
+                                                    Authentication auth) {
+        AppUser user = userRepo.findById(UUID.fromString(auth.getName())).orElseThrow();
+        request.setContractId(resolveContractId(user.getCompanyId()));
+        int avgWeeklyVolume = resolveAvgWeeklyVolume(user.getCompanyId());
+        return ResponseEntity.ok(rateEngine.quote(request, avgWeeklyVolume));
     }
 
     /**
@@ -57,17 +65,19 @@ public class RateController {
      */
     @PostMapping("/quote/batch")
     public ResponseEntity<List<RateQuoteResponse>> quoteBatch(
-            @Valid @RequestBody List<RateQuoteRequest> requests) {
+            @Valid @RequestBody List<RateQuoteRequest> requests,
+            Authentication auth) {
         if (requests == null || requests.isEmpty()) {
             throw new InvalidInputException("At least one request is required");
         }
         if (requests.size() > 50) {
             throw new InvalidInputException("Batch size cannot exceed 50 packages");
         }
-        // Resolve volume once for the first contract (all requests in a batch share the same account)
-        int avgWeeklyVolume = resolveAvgWeeklyVolume(requests.get(0).getContractId());
+        AppUser user = userRepo.findById(UUID.fromString(auth.getName())).orElseThrow();
+        String contractId = resolveContractId(user.getCompanyId());
+        int avgWeeklyVolume = resolveAvgWeeklyVolume(user.getCompanyId());
         List<RateQuoteResponse> responses = requests.stream()
-                .map(req -> rateEngine.quote(req, avgWeeklyVolume))
+                .map(req -> { req.setContractId(contractId); return rateEngine.quote(req, avgWeeklyVolume); })
                 .toList();
         return ResponseEntity.ok(responses);
     }
@@ -83,10 +93,15 @@ public class RateController {
 
     // -----------------------------------------------------------------------
 
-    private int resolveAvgWeeklyVolume(String contractId) {
-        Contract contract = contractRepo.findById(contractId)
-                .orElseThrow(() -> new ContractNotFoundException("Contract not found: " + contractId));
-        return baselineRepo.findLatest(contract.getCompanyId())
+    private String resolveContractId(UUID companyId) {
+        return contractRepo.findByCompanyId(companyId).stream()
+                .findFirst()
+                .orElseThrow(() -> new ContractNotFoundException("No contract found for company"))
+                .getContractId();
+    }
+
+    private int resolveAvgWeeklyVolume(UUID companyId) {
+        return baselineRepo.findLatest(companyId)
                 .map(b -> b.getAvgWeeklyVolume().intValue())
                 .orElse(0);
     }
