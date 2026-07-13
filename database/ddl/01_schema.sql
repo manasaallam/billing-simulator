@@ -35,7 +35,8 @@ CREATE TABLE app_user (
     auth_provider_uid VARCHAR(255), -- BCrypt hash (local) or OAuth UID (GCP/Firebase)
     role              VARCHAR(30) NOT NULL DEFAULT 'CUSTOMER', -- CUSTOMER / ADMIN
 
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_login        TIMESTAMPTZ
 );
 
 CREATE INDEX idx_app_user_company ON app_user(company_id);
@@ -347,9 +348,11 @@ CREATE TABLE knowledge_article (
     key_code        VARCHAR(60) NOT NULL,   -- 'Fuel Surcharge' / 'DEMAND'
     content         TEXT NOT NULL,
     embedding       vector(1536) NOT NULL,
-    business_reason TEXT NOT NULL,
+    business_reason TEXT,
     source_doc      VARCHAR(120),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    token_count     INT
 );
 CREATE INDEX idx_knowledge_company ON knowledge_article(company_id);
 CREATE INDEX idx_knowledge_kind    ON knowledge_article(kind, key_code);

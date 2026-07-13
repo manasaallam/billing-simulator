@@ -36,6 +36,9 @@ public class AppUser {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "last_login")
+    private Instant lastLogin;
+
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
     public UUID getCompanyId() { return companyId; }
@@ -50,4 +53,6 @@ public class AppUser {
     public void setRole(String role) { this.role = role; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getLastLogin() { return lastLogin; }
+    public void setLastLogin(Instant lastLogin) { this.lastLogin = lastLogin; }
 }
