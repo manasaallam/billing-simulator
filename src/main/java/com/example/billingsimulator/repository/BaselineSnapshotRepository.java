@@ -13,18 +13,18 @@ import java.util.UUID;
 @Repository
 public interface BaselineSnapshotRepository extends JpaRepository<BaselineSnapshot, UUID> {
 
-    List<BaselineSnapshot> findByAccountIdOrderByPeriodToDesc(UUID accountId);
+    List<BaselineSnapshot> findByCompanyIdOrderByPeriodToDesc(UUID companyId);
 
-    /** Latest baseline for an account (most recent period end). */
+    /** Latest baseline for a company (most recent period end). */
     @Query("""
         SELECT b FROM BaselineSnapshot b
-        WHERE b.accountId = :accountId
+        WHERE b.companyId = :companyId
         ORDER BY b.periodTo DESC
         """)
-    List<BaselineSnapshot> findLatestForAccount(@Param("accountId") UUID accountId);
+    List<BaselineSnapshot> findLatestForCompany(@Param("companyId") UUID companyId);
 
-    default Optional<BaselineSnapshot> findLatest(UUID accountId) {
-        List<BaselineSnapshot> results = findLatestForAccount(accountId);
+    default Optional<BaselineSnapshot> findLatest(UUID companyId) {
+        List<BaselineSnapshot> results = findLatestForCompany(companyId);
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
 }

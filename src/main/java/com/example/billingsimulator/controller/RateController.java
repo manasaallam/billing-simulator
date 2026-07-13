@@ -87,7 +87,7 @@ public class RateController {
     private int resolveAvgWeeklyVolume(String contractId) {
         Contract contract = contractRepo.findById(contractId)
                 .orElseThrow(() -> new ContractNotFoundException("Contract not found: " + contractId));
-        return baselineRepo.findLatest(contract.getAccountId())
+        return baselineRepo.findLatest(contract.getCompanyId())
                 .map(b -> b.getAvgWeeklyVolume().intValue())
                 .orElse(0);
     }

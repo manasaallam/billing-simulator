@@ -596,7 +596,7 @@ public class SimulationService {
         }
         // Resolve account from contract and load latest baseline
         Contract contract = loadContract(req.getContractId());
-        return baselineRepo.findLatest(contract.getAccountId())
+        return baselineRepo.findLatest(contract.getCompanyId())
                 .orElseThrow(() -> new InvalidInputException(
                         "No baseline snapshot found for account on contract: " + req.getContractId()));
     }

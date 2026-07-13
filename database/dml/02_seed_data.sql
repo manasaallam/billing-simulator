@@ -172,22 +172,22 @@ INSERT INTO discount_tier (program_id, category_code, vol_min, vol_max, discount
   ('22222222-2222-2222-2222-222222222222','INTL_STANDARD', 71, NULL, 0.3700);
 
 -- ---------------------------------------------------------
--- ACCOUNT + USER + PROFILE
+-- COMPANY + USER + PROFILE
 -- ---------------------------------------------------------
-INSERT INTO account (account_id, name, account_no) VALUES
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Demo Customer Inc.', 'ACCT-1001');
+INSERT INTO company (company_id, company_name, access_key, status) VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Demo Customer Inc.', 'DEMO2026', 'ACTIVE');
 
--- password_hash is a placeholder; replace with a real BCrypt hash in the app
-INSERT INTO app_user (account_id, email, password_hash, role) VALUES
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'demo@customer.com', '{bcrypt-placeholder}', 'CUSTOMER');
+-- auth_provider_uid stores a BCrypt hash for local auth (replace with real hash in prod)
+INSERT INTO app_user (company_id, full_name, email, auth_provider_uid, role) VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Demo User', 'demo@customer.com', '{bcrypt-placeholder}', 'CUSTOMER');
 
-INSERT INTO customer_profile (account_id, invoice_frequency, media, sort_option, language) VALUES
+INSERT INTO customer_profile (company_id, invoice_frequency, media, sort_option, language) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'WEEKLY', 'PDF', 'SHIP_DATE', 'EN');
 
 -- ---------------------------------------------------------
 -- CONTRACT (demo account runs on the VOLUME_TIERED program)
 -- ---------------------------------------------------------
-INSERT INTO contract (contract_id, account_id, program_id, tier, fuel_program, payment_terms, late_payment_fee_pct, effective_from) VALUES
+INSERT INTO contract (contract_id, company_id, program_id, tier, fuel_program, payment_terms, late_payment_fee_pct, effective_from) VALUES
   ('CTR-001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '22222222-2222-2222-2222-222222222222', 'STANDARD', 'FUEL_STANDARD', 'NET30', 0.0100, DATE '2026-01-01');
 
@@ -206,7 +206,7 @@ INSERT INTO contract_incentive (contract_id, incentive_type, accessorial_code, v
 -- SAMPLE SHIPMENTS (small baseline slice)
 -- values are illustrative; the engine recomputes precisely
 -- ---------------------------------------------------------
-INSERT INTO shipment (account_id, contract_id, tracking_number, ship_date, bill_week,
+INSERT INTO shipment (company_id, contract_id, tracking_number, ship_date, bill_week,
                       origin_zip, dest_zip, zone, service_code, actual_weight, billed_weight,
                       package_count, residential, published_charge, discount_amount, net_transport,
                       fuel_charge, accessorial_charge, total_charge) VALUES
@@ -230,7 +230,7 @@ SELECT shipment_id, 'RESIDENTIAL', 5.25, 3.15 FROM shipment WHERE tracking_numbe
 -- ---------------------------------------------------------
 -- BASELINE SNAPSHOT (frozen aggregate — drives tier lookups)
 -- ---------------------------------------------------------
-INSERT INTO baseline_snapshot (account_id, period_from, period_to, total_shipments,
+INSERT INTO baseline_snapshot (company_id, period_from, period_to, total_shipments,
                                avg_weekly_volume, total_cost, metrics_json) VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', DATE '2025-06-01', DATE '2026-05-31', 1040,
    20.0, 502000.00,
