@@ -24,12 +24,12 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql:///billing-simulation-db?cloudSqlInstance=qwiklabs-gcp-03-8cbb6b09ddfc:us-central1:billing-simulation-data&socketFactory=com.google.cloud.sql.postgres.SocketFactory}
     username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:TechHunter@123}
+    password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
-      connection-timeout: 10000
-      initialization-fail-timeout: 10000
+      connection-timeout: 30000
+      initialization-fail-timeout: 30000
 
   jpa:
     # Dialect set explicitly so Hibernate does not need a live connection at startup
@@ -47,6 +47,13 @@ spring:
 
 server:
   port: 8080
+
+# Gemini AI — set GEMINI_API_KEY env variable to activate embedding + generation
+# Without it, LocalRuleBasedAiClient is used (regex patterns, no vectorization)
+# Get key: https://aistudio.google.com/apikey
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-3-flash-preview
 
 # JWT session-token settings.
 # Override JWT_SECRET in production — must be at least 32 bytes for HS256.

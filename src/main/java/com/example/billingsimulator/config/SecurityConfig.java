@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/simulate/**").permitAll()
                 .requestMatchers("/api/rate/**").permitAll()
                 .requestMatchers("/api/explain/**").permitAll()
+                .requestMatchers("/api/admin/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 // Infra
                 .requestMatchers("/actuator/health").permitAll()

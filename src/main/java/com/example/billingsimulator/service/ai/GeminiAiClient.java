@@ -67,8 +67,7 @@ public class GeminiAiClient implements AiClient {
                 ),
                 "generationConfig", Map.of(
                         "temperature", 0.1,
-                        "maxOutputTokens", 2048,
-                        "responseMimeType", "application/json"
+                        "maxOutputTokens", 2048
                 )
         );
 
