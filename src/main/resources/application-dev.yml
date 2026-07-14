@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:billing_simulator
+    url: jdbc:h2:mem:billing_simulator;DB_CLOSE_DELAY=-1;NON_KEYWORDS=VALUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -11,6 +11,13 @@ spring:
 
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
 
 # Gemini AI — set GEMINI_API_KEY env variable to activate real AI
 # Without it, LocalRuleBasedAiClient is used (regex patterns)

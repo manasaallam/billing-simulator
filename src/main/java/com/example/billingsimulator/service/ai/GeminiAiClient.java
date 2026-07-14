@@ -66,7 +66,8 @@ public class GeminiAiClient implements AiClient {
                         Map.of("parts", List.of(Map.of("text", userMessage)))
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.1
+                        "temperature", 0.1,
+                        "maxOutputTokens", 2048
                 )
         );
 
@@ -98,7 +99,8 @@ public class GeminiAiClient implements AiClient {
                         Map.of("parts", List.of(Map.of("text", resultsJson)))
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.7
+                        "temperature", 0.7,
+                        "maxOutputTokens", 2048
                 )
         );
 
@@ -154,6 +156,7 @@ public class GeminiAiClient implements AiClient {
                 ),
                 "generationConfig", Map.of(
                         "temperature", 0.3,
+                        "maxOutputTokens", 2048,
                         "responseMimeType", "application/json"
                 )
         );
@@ -181,10 +184,36 @@ public class GeminiAiClient implements AiClient {
                     .path("content").path("parts").path(0)
                     .path("text").asText();
             log.info("Gemini response: {}", text);
-            return text;
+            return repairJson(text);
         } catch (Exception e) {
             log.error("Failed to parse Gemini response: {}", response, e);
             return "{}";
         }
+    }
+
+    /**
+     * Repair truncated JSON from Gemini (missing closing braces/brackets).
+     */
+    private String repairJson(String json) {
+        if (json == null || json.isBlank()) return "{}";
+        String trimmed = json.trim();
+        // Count unbalanced braces and brackets
+        int braces = 0, brackets = 0;
+        boolean inString = false;
+        char prev = 0;
+        for (char c : trimmed.toCharArray()) {
+            if (c == '"' && prev != '\\') inString = !inString;
+            if (!inString) {
+                if (c == '{') braces++;
+                else if (c == '}') braces--;
+                else if (c == '[') brackets++;
+                else if (c == ']') brackets--;
+            }
+            prev = c;
+        }
+        StringBuilder sb = new StringBuilder(trimmed);
+        while (brackets > 0) { sb.append(']'); brackets--; }
+        while (braces > 0) { sb.append('}'); braces--; }
+        return sb.toString();
     }
 }

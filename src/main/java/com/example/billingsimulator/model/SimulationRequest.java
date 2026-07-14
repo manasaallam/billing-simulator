@@ -1,6 +1,5 @@
 package com.example.billingsimulator.model;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -20,7 +19,6 @@ import jakarta.validation.constraints.Size;
  */
 public class SimulationRequest {
 
-    @NotBlank(message = "Contract ID is required")
     private String contractId;
 
     @Size(min = 10, max = 2000, message = "Query must be between 10 and 2000 characters")

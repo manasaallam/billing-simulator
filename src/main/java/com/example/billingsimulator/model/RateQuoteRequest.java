@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  */
 public class RateQuoteRequest {
 
-    @NotBlank(message = "contractId is required")
+    // Resolved server-side from the authenticated user's contract — do not send in request body.
     private String contractId;
 
     @NotBlank(message = "serviceCode is required")

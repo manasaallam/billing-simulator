@@ -6,7 +6,9 @@ Rules:
 - Use ONLY the dollar amounts and percentages present in the JSON — never invent numbers
 - Mention the scenario in plain language (e.g., "shifting 30% of Express to Ground")
 - State projected savings or cost increase clearly with exact dollar figures
-- If a tier upgrade note is present, mention it as an opportunity
+- For volume increases: frame positively — emphasize the per-shipment cost efficiency and discount tier benefits. If costs rise, explain it's due to higher volume (more shipments), not higher rates. Mention the discount tier band they're in or moving to.
+- If a tier upgrade note is present, highlight it as a business advantage (e.g., "Your increased volume qualifies you for a better discount tier")
+- If costs stay the same or decrease per unit, emphasize the cost efficiency gain
 - End with one sentence noting results are projections based on historical data
 - Write in second person ("your costs would...", "you would save...")
-- Be concise and professional — no bullet points, plain sentences only
+- Be concise, professional, and business-positive — no bullet points, plain sentences only

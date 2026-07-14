@@ -3,15 +3,21 @@ package com.example.billingsimulator.controller;
 import com.example.billingsimulator.model.*;
 import com.example.billingsimulator.model.RateSimulationRequest;
 import com.example.billingsimulator.model.RateSimulationResponse;
+import com.example.billingsimulator.exception.ContractNotFoundException;
+import com.example.billingsimulator.model.AppUser;
+import com.example.billingsimulator.repository.AppUserRepository;
+import com.example.billingsimulator.repository.ContractRepository;
 import com.example.billingsimulator.service.ParameterExtractionService;
 import com.example.billingsimulator.service.ParameterValidationService;
 import com.example.billingsimulator.service.SimulationService;
+import com.example.billingsimulator.service.InvoiceExplainerService;
 import com.example.billingsimulator.service.ai.AiClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -41,31 +47,59 @@ public class SimulationController {
     private final ParameterExtractionService extractionService;
     private final ParameterValidationService validationService;
     private final SimulationService simulationService;
+    private final InvoiceExplainerService invoiceExplainerService;
     private final AiClient aiClient;
     private final ObjectMapper objectMapper;
+    private final AppUserRepository userRepo;
+    private final ContractRepository contractRepo;
 
     public SimulationController(ParameterExtractionService extractionService,
                                 ParameterValidationService validationService,
                                 SimulationService simulationService,
+                                InvoiceExplainerService invoiceExplainerService,
                                 AiClient aiClient,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                AppUserRepository userRepo,
+                                ContractRepository contractRepo) {
         this.extractionService = extractionService;
         this.validationService = validationService;
         this.simulationService = simulationService;
+        this.invoiceExplainerService = invoiceExplainerService;
         this.aiClient = aiClient;
         this.objectMapper = objectMapper;
+        this.userRepo = userRepo;
+        this.contractRepo = contractRepo;
+    }
+
+    private String resolveContractId(Authentication auth) {
+        AppUser user = userRepo.findById(UUID.fromString(auth.getName())).orElseThrow();
+        return contractRepo.findByCompanyId(user.getCompanyId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new ContractNotFoundException("No contract found for company"))
+                .getContractId();
     }
 
     /**
      * New simulation — takes a natural-language query, extracts and validates parameters.
      */
     @PostMapping
-    public ResponseEntity<SimulationResponse> simulate(@Valid @RequestBody SimulationRequest request) {
-        log.info("Simulation request from contract: {}", request.getContractId());
+    public ResponseEntity<SimulationResponse> simulate(@Valid @RequestBody SimulationRequest request,
+                                                        Authentication auth) {
+        String contractId = resolveContractId(auth);
+        log.info("Simulation request for contract: {}", contractId);
 
         String conversationId = UUID.randomUUID().toString();
 
         try {
+            // Intent detection: is this a simulation or an invoice question?
+            if (request.getExtractedParameters() == null || !request.getExtractedParameters().hasAnyScenario()) {
+                String intent = detectIntent(request.getNaturalLanguageQuery());
+                if ("INVOICE_QUESTION".equals(intent)) {
+                    log.info("Routing to invoice explainer");
+                    return ResponseEntity.ok(handleInvoiceQuestion(request, conversationId));
+                }
+            }
+
             SimulationParameters params;
             if (request.getExtractedParameters() != null && request.getExtractedParameters().hasAnyScenario()) {
                 params = request.getExtractedParameters();
@@ -74,7 +108,7 @@ public class SimulationController {
                 params = extractionService.extract(request.getNaturalLanguageQuery());
             }
 
-            return ResponseEntity.ok(validateAndSimulate(params, conversationId, request.getContractId(), request.getNaturalLanguageQuery()));
+            return ResponseEntity.ok(validateAndSimulate(params, conversationId, contractId, request.getNaturalLanguageQuery()));
 
         } catch (Exception e) {
             log.error("Simulation failed", e);
@@ -87,8 +121,10 @@ public class SimulationController {
      * parameters are already structured (no AI extraction needed).
      */
     @PostMapping("/clarify")
-    public ResponseEntity<SimulationResponse> clarify(@Valid @RequestBody SimulationRequest request) {
-        log.info("Clarification response from contract: {}", request.getContractId());
+    public ResponseEntity<SimulationResponse> clarify(@Valid @RequestBody SimulationRequest request,
+                                                       Authentication auth) {
+        String contractId = resolveContractId(auth);
+        log.info("Clarification response for contract: {}", contractId);
 
         String conversationId = request.getConversationId() != null
                 ? request.getConversationId()
@@ -99,7 +135,7 @@ public class SimulationController {
             if (params == null) {
                 return ResponseEntity.ok(SimulationResponse.error("No parameters provided in clarification."));
             }
-            return ResponseEntity.ok(validateAndSimulate(params, conversationId, request.getContractId()));
+            return ResponseEntity.ok(validateAndSimulate(params, conversationId, contractId));
         } catch (Exception e) {
             log.error("Clarification failed", e);
             return ResponseEntity.ok(SimulationResponse.error("Something went wrong. Please try again."));
@@ -198,6 +234,19 @@ public class SimulationController {
             req.setScenarioType("FUEL_CHANGE");
             if (fc.getTargetFuelSurchargePct() != null) {
                 req.setHypotheticalFuelPct(BigDecimal.valueOf(fc.getTargetFuelSurchargePct()));
+            } else if (fc.getTargetDieselPrice() != null) {
+                // Estimate fuel surcharge % from diesel price using linear approximation
+                // Based on index: $5.01→14%, $5.21→15% → ~5% per $1 increase
+                double estimatedPct = 14.0 + (fc.getTargetDieselPrice() - 5.0) * 5.0;
+                req.setHypotheticalFuelPct(BigDecimal.valueOf(Math.max(0, estimatedPct)));
+            } else if (fc.getFuelPriceChangePct() != null) {
+                // Current fuel is ~15%, apply relative change
+                double currentFuel = 15.0;
+                double newFuel = currentFuel * (1 + fc.getFuelPriceChangePct() / 100.0);
+                req.setHypotheticalFuelPct(BigDecimal.valueOf(newFuel));
+            } else {
+                // Default: assume 20% surcharge if no specific value given
+                req.setHypotheticalFuelPct(BigDecimal.valueOf(20.0));
             }
         } else if (params.getDeliveryTypeChange() != null || (params.getAccessorialChanges() != null && !params.getAccessorialChanges().isEmpty())) {
             req.setScenarioType("ACCESSORIAL");
@@ -240,5 +289,54 @@ public class SimulationController {
         }
         result.setConfidenceLevel(resp.getConfidence() != null ? resp.getConfidence().toUpperCase() : "MEDIUM");
         return result;
+    }
+
+    // --- Intent detection: simulation vs invoice question ---
+
+    private static final String INTENT_PROMPT = """
+            Classify the user's intent. Return ONLY one word:
+            - SIMULATION — if asking about hypothetical changes (shift services, change volume, weight, fuel, etc.)
+            - INVOICE_QUESTION — if asking about existing charges, invoice line items, why something was billed, surcharge explanations
+
+            User query: """;
+
+    private String detectIntent(String query) {
+        if (query == null || query.isBlank()) return "SIMULATION";
+        try {
+            String response = aiClient.generate(INTENT_PROMPT, query);
+            String intent = response.trim().replaceAll("[^A-Z_]", "");
+            log.info("Detected intent: {}", intent);
+            return intent.contains("INVOICE") ? "INVOICE_QUESTION" : "SIMULATION";
+        } catch (Exception e) {
+            log.warn("Intent detection failed, defaulting to SIMULATION", e);
+            return "SIMULATION";
+        }
+    }
+
+    private SimulationResponse handleInvoiceQuestion(SimulationRequest request, String conversationId) {
+        InvoiceQuery invoiceQuery = new InvoiceQuery();
+        invoiceQuery.setCustomerId(request.getContractId());
+        invoiceQuery.setQuestion(request.getNaturalLanguageQuery());
+
+        InvoiceExplanation explanation = invoiceExplainerService.explain(invoiceQuery);
+
+        // The AI may return JSON-wrapped text; extract plain text if so
+        String explanationText = explanation.getExplanation();
+        if (explanationText != null && explanationText.trim().startsWith("{")) {
+            try {
+                var node = objectMapper.readTree(explanationText);
+                if (node.has("explanation")) {
+                    explanationText = node.get("explanation").asText();
+                }
+            } catch (Exception ignored) {}
+        }
+
+        SimulationResult result = new SimulationResult();
+        result.setSimulationId(conversationId);
+        result.setExplanation(explanationText);
+
+        SimulationResponse resp = SimulationResponse.success(result, conversationId);
+        resp.setDisclaimer(null);
+        return resp;
     }
 }
