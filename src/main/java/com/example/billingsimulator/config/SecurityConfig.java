@@ -66,7 +66,10 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
             "http://localhost:3000",
             "http://localhost:5173",
-            "https://storage.googleapis.com"
+            "http://storage.googleapis.com",
+            "https://storage.googleapis.com",
+            "http://storage.cloud.google.com",
+            "https://storage.cloud.google.com"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
