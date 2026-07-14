@@ -16,11 +16,13 @@ spring:
   #   Public IP:       136.64.249.194   (port 5432)
   #   Database:        billing-simulation-db
   #
-  # To connect over the Public IP from your local machine you MUST add your
-  # workstation's public IP to Cloud SQL -> Connections -> Networking ->
-  # Authorized networks (otherwise the connection times out / is refused).
+  # Two ways to connect:
+  #   1. Cloud SQL Socket Factory (recommended, uses ADC / service account):
+  #      DB_URL=jdbc:postgresql:///billing-simulation-db?cloudSqlInstance=qwiklabs-gcp-03-8cbb6b09ddfc:us-central1:billing-simulation-data&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+  #   2. Direct Public IP (requires your IP in Cloud SQL Authorized Networks):
+  #      DB_URL=jdbc:postgresql://136.64.249.194:5432/billing-simulation-db?sslmode=require
   datasource:
-    url: ${DB_URL:jdbc:postgresql://136.64.249.194:5432/billing-simulation-db?sslmode=require}
+    url: ${DB_URL:jdbc:postgresql:///billing-simulation-db?cloudSqlInstance=qwiklabs-gcp-03-8cbb6b09ddfc:us-central1:billing-simulation-data&socketFactory=com.google.cloud.sql.postgres.SocketFactory}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:TechHunter@123}
     driver-class-name: org.postgresql.Driver
@@ -41,6 +43,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        default_schema: public
 
 server:
   port: 8080
