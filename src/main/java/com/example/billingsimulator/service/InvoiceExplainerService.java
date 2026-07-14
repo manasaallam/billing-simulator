@@ -60,7 +60,10 @@ public class InvoiceExplainerService {
         InvoiceExplanation explanation = new InvoiceExplanation();
         explanation.setExplanation(aiResponse);
         explanation.setSources(List.of("UPS Surcharge Rules", "Fuel Schedule 2026", "Contract Terms"));
-        explanation.setConfidenceLevel(knowledgeContext.contains("SURCHARGE RULE") ? "HIGH" : "MEDIUM");
+        explanation.setConfidenceLevel(
+                (knowledgeContext.contains("SURCHARGE") || knowledgeContext.contains("CONTRACT")
+                        || knowledgeContext.contains("PRICING_PROGRAM") || knowledgeContext.contains("CHARGE_EXPLANATION"))
+                        ? "HIGH" : "MEDIUM");
 
         return explanation;
     }

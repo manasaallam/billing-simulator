@@ -28,6 +28,57 @@ A billing simulation agent that allows customers to ask **"what-if" questions** 
 ---
 
 ## Tech Stack
+## How login and signup work (plain English)
+
+### Signup — joining the system
+
+When a new user signs up they provide:
+- **Their name and email** — who they are
+- **A password** — at least 8 characters
+- **An access key** — a short company code like `DEMO2026`
+
+The access key is the important one. It is the link between a person and their company's
+shipping data. The company's IT admin or account manager gives this out. Without a valid
+access key that matches an active company in the database, signup is refused.
+
+What happens step by step:
+1. System checks — has this email already been registered? If yes → rejected.
+2. System looks up the access key in the `company` table — does this company exist?
+   If the key is wrong or the company is inactive → rejected.
+3. Password is hashed with BCrypt (never stored as plain text) and saved in the database.
+4. The user is now linked to that company by its internal ID (a UUID, not the access key).
+5. A **JWT token** is issued and returned — the user is now logged in immediately.
+
+### Login — coming back
+
+User provides email + password. That's it — the access key is not asked again.
+
+What happens:
+1. System finds the user by email.
+2. BCrypt compares the entered password against the stored hash — if it doesn't match → rejected.
+3. System checks the company is still `ACTIVE` — if not → rejected with a clear message.
+4. A fresh **JWT token** is issued and returned.
+
+### The JWT token — how it keeps you logged in
+
+JWT = JSON Web Token. Think of it as a secure digital pass that the server issues.
+
+- It contains: your user ID, email, role (`CUSTOMER`/`ADMIN`), and company ID.
+- It expires after **1 hour** (configurable).
+- Every API call after login must include it in the `Authorization: Bearer <token>` header.
+- The server reads the token, trusts it (because it's cryptographically signed), and knows who you are — **without touching the database on every request**.
+- If the token is missing, tampered with, or expired → the request is rejected with 401.
+
+### Access key — one-time company linker
+
+The access key (e.g. `DEMO2026`) is used **only at signup**. It is:
+- A human-readable code given to employees of a company.
+- Used once to discover which company's data the new user should be linked to.
+- After signup, the user's database row permanently stores the company's UUID — the access key is never needed again.
+
+---
+
+
 
 | Technology | Version | Purpose |
 |---|---|---|

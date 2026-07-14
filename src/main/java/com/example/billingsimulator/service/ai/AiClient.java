@@ -21,4 +21,22 @@ public interface AiClient {
      * @return JSON string representing extracted SimulationParameters
      */
     String generate(String systemPrompt, String userMessage);
+
+    /**
+     * Take a rate engine result JSON and return a plain-English business explanation.
+     *
+     * @param resultsJson  serialized RateSimulationResponse from the rate engine
+     * @return plain-text explanation suitable for display to the customer
+     */
+    String explain(String resultsJson);
+
+    /**
+     * Generate contextual clarification questions when extracted parameters are
+     * incomplete or ambiguous.
+     *
+     * @param originalQuery     the user's original natural-language query
+     * @param validationErrors  JSON describing what's missing/invalid
+     * @return JSON array of clarification questions
+     */
+    String clarify(String originalQuery, String validationErrors);
 }

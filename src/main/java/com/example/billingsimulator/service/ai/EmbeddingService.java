@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class EmbeddingService {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
-    private static final String EMBEDDING_MODEL = "text-embedding-004";
+    private static final String EMBEDDING_MODEL = "gemini-embedding-001";
     private static final int EXPECTED_DIMENSIONS = 768;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -52,7 +52,8 @@ public class EmbeddingService {
         Map<String, Object> requestBody = Map.of(
                 "content", Map.of(
                         "parts", List.of(Map.of("text", text))
-                )
+                ),
+                "outputDimensionality", EXPECTED_DIMENSIONS
         );
 
         try {

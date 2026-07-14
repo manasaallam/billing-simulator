@@ -4,7 +4,6 @@ import com.example.billingsimulator.model.RateQuoteRequest;
 import com.example.billingsimulator.model.RateQuoteResponse;
 import com.example.billingsimulator.exception.ContractNotFoundException;
 import com.example.billingsimulator.exception.InvalidInputException;
-import com.example.billingsimulator.model.BaselineSnapshot;
 import com.example.billingsimulator.model.Contract;
 import com.example.billingsimulator.repository.BaselineSnapshotRepository;
 import com.example.billingsimulator.repository.ContractRepository;
@@ -87,7 +86,7 @@ public class RateController {
     private int resolveAvgWeeklyVolume(String contractId) {
         Contract contract = contractRepo.findById(contractId)
                 .orElseThrow(() -> new ContractNotFoundException("Contract not found: " + contractId));
-        return baselineRepo.findLatest(contract.getAccountId())
+        return baselineRepo.findLatest(contract.getCompanyId())
                 .map(b -> b.getAvgWeeklyVolume().intValue())
                 .orElse(0);
     }

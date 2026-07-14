@@ -61,6 +61,8 @@ The rate engine team never talks directly to Gemini.
 
 | URL | Owner | Purpose |
 |---|---|---|
+| `POST /api/auth/signup` | Rate engine team | Register new user with company access key |
+| `POST /api/auth/login` | Rate engine team | Login — returns JWT |
 | `POST /api/simulate` | AI team | Accepts raw NL query, runs extraction + clarification |
 | `POST /api/simulate/clarify` | AI team | Re-run with user's answers to clarification questions |
 | `POST /api/rate/quote` | Rate engine team | Single-package deterministic rate quote |
@@ -81,7 +83,68 @@ The rate engine team never talks directly to Gemini.
 
 ---
 
-## 4. Request Flow (Sequence)
+## 4. Auth Flow
+
+### Signup — `POST /api/auth/signup`
+
+```
+SignupRequest { name, accessKey, email, password, confirmPassword }
+  │
+  ├─ @Valid: format/length checks (email format, password ≥ 8 chars, accessKey alphanumeric)
+  ├─ passwords match? if not → 400
+  ├─ email already exists? → 409 Conflict
+  ├─ companyRepository.findByAccessKey(accessKey)
+  │     → not found → 401 "Access key not recognised"
+  │     → company.status != ACTIVE → 401 "Company account is inactive"
+  ├─ BCrypt.encode(password) → stored in auth_provider_uid column
+  ├─ new AppUser saved to app_user table (company_id FK = company.company_id)
+  └─ JwtService.generateToken(user) → JWT returned immediately (user is logged in)
+```
+
+### Login — `POST /api/auth/login`
+
+```
+LoginRequest { email, password }
+  │
+  ├─ appUserRepository.findByEmailIgnoreCase(email)
+  ├─ BCrypt.matches(password, user.authProviderUid)? if not → 401
+  ├─ companyRepository.findById(user.companyId)
+  │     → company.status != ACTIVE → 401 "Company account is inactive"
+  └─ JwtService.generateToken(user) → JWT returned
+```
+
+### JWT token — every subsequent request
+
+```
+Authorization: Bearer <token>
+  │
+  ▼
+JwtAuthenticationFilter (OncePerRequestFilter)
+  ├─ extracts token from header
+  ├─ JwtService.parse(token) → verifies HS256 signature + expiry
+  ├─ claims: sub=userId, email, role, companyId
+  └─ sets Spring Security context → downstream code knows who the user is
+
+Security rules:
+  /api/auth/**      → always public (no token needed)
+  /api/simulate/**  → public (hackathon scope)
+  /api/rate/**      → public (hackathon scope)
+  everything else   → must have a valid JWT
+```
+
+### JWT claims stored in token
+
+| Claim | Value | Source |
+|---|---|---|
+| `sub` | user UUID | `app_user.user_id` |
+| `email` | user email | `app_user.email` |
+| `role` | `CUSTOMER` or `ADMIN` | `app_user.role` |
+| `companyId` | company UUID | `app_user.company_id` |
+| `iat` / `exp` | issued/expiry | set to now / now+1h |
+
+---
+
+## 5. Request Flow (Sequence)
 
 ```
 React UI
@@ -189,9 +252,9 @@ Every simulation response includes both:
 
 | Field | Value |
 |---|---|
-| Account name | Demo Customer Inc. |
-| Account no | ACCT-1001 |
-| Account ID | `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa` |
+| Company name | Demo Customer Inc. |
+| Access key | `DEMO2026` |
+| Company ID | `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa` |
 | Contract ID | `CTR-001` |
 | Pricing program | Volume-Tiered ("Save as You Grow") |
 | Baseline period | June 2025 – May 2026 |
@@ -207,19 +270,19 @@ Every simulation response includes both:
 
 | Group | Tables |
 |---|---|
-| Account | `account`, `app_user`, `customer_profile` |
+| Identity | `company`, `app_user`, `customer_profile` |
 | Pricing | `pricing_program`, `discount_category`, `discount_tier` |
 | Services | `service_level`, `dim_factor` |
 | Rates | `rate_card`, `zone_matrix`, `min_shipping_charge` |
 | Fuel | `fuel_program`, `fuel_index` |
 | Surcharges | `accessorial_type` |
-| Contract | `contract`, `contract_incentive`, `payment_plan` |
+| Contract | `contract`, `contract_incentive`, `payment_plan`, `payment_plan_company` |
 | Shipments | `shipment`, `shipment_charge` |
 | Baseline | `baseline_snapshot` |
 | Chat | `conversation`, `chat_message` |
 | Scenarios | `simulation_scenario` |
 | Invoice | `invoice`, `invoice_line` |
-| RAG | `knowledge_article` |
+| RAG | `knowledge_article` (pgvector `vector(1536)` + HNSW index) |
 
 Full DDL → [`database/ddl/01_schema.sql`](database/ddl/01_schema.sql)
 Seed data → [`database/dml/02_seed_data.sql`](database/dml/02_seed_data.sql)
@@ -231,6 +294,7 @@ Seed data → [`database/dml/02_seed_data.sql`](database/dml/02_seed_data.sql)
 | Layer | Technology |
 |---|---|
 | Backend | Java 17, Spring Boot 3.3.1, Spring Data JPA, Spring Security |
+| Auth | JWT (jjwt 0.12.6, HS256), BCrypt password hashing |
 | Database | Supabase (PostgreSQL), pgbouncer (transaction pooler, port 6543) |
 | AI | Google Cloud Vertex AI — Gemini 2.x Flash (classify/extract), Pro (final answer) |
 | RAG | Vertex AI Vector Search or Supabase pgvector |
@@ -294,7 +358,11 @@ then map the `SimulationResponse` back into `SimulationResult`.
 
 ### Rate engine team (`feature/billing-simulation-design`) must do:
 
-**No changes required.** The URL conflict is already resolved — our endpoints live under `/api/rate/*`.
+**All done ✅** JWT auth from `origin/main` has been merged into this branch:
+- `POST /api/auth/signup` and `POST /api/auth/login` endpoints live and wired
+- `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig` all in place
+- Company `ACTIVE` status check on both signup and login
+- `access_key` validated at signup, resolves to `company_id` UUID stored on user
 
 ### Merge is safe when:
 - [ ] AI team prompt outputs exact DB codes

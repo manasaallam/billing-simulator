@@ -13,8 +13,8 @@ public class Contract {
     @Column(name = "contract_id")
     private String contractId;
 
-    @Column(name = "account_id", nullable = false)
-    private UUID accountId;
+    @Column(name = "company_id", nullable = false)
+    private UUID companyId;
 
     @Column(name = "program_id", nullable = false)
     private UUID programId;
@@ -43,8 +43,8 @@ public class Contract {
 
     public String getContractId() { return contractId; }
     public void setContractId(String contractId) { this.contractId = contractId; }
-    public UUID getAccountId() { return accountId; }
-    public void setAccountId(UUID accountId) { this.accountId = accountId; }
+    public UUID getCompanyId() { return companyId; }
+    public void setCompanyId(UUID companyId) { this.companyId = companyId; }
     public UUID getProgramId() { return programId; }
     public void setProgramId(UUID programId) { this.programId = programId; }
     public String getTier() { return tier; }

@@ -14,7 +14,6 @@ spring:
 
 # Gemini AI — set GEMINI_API_KEY env variable to activate real AI
 # Without it, LocalRuleBasedAiClient is used (regex patterns)
-# Get key: https://aistudio.google.com/apikey
-# gemini:
-#   api-key: ${GEMINI_API_KEY}
-#   model: gemini-2.0-flash
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.5-flash

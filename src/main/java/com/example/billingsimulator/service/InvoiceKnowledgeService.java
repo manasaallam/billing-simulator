@@ -53,37 +53,113 @@ public class InvoiceKnowledgeService {
         this.objectMapper = objectMapper;
     }
 
+    // Precomputed embeddings for in-memory vector search (no DB needed)
+    private List<Map<String, Object>> precomputedEmbeddings = new ArrayList<>();
+
     @PostConstruct
     public void loadKnowledge() {
         surchargeRules = loadJson("knowledge/surcharge-rules.json");
         chargeExplanations = loadJson("knowledge/charge-explanations.json");
         fuelSchedule = loadJson("knowledge/fuel-schedule.json");
-        log.info("Loaded knowledge: {} surcharge rules, {} charge explanations, {} fuel weeks",
-                surchargeRules.size(), chargeExplanations.size(), fuelSchedule.size());
+        precomputedEmbeddings = loadJson("knowledge/precomputed-embeddings.json");
+        log.info("Loaded knowledge: {} surcharge rules, {} charge explanations, {} fuel weeks, {} precomputed embeddings",
+                surchargeRules.size(), chargeExplanations.size(), fuelSchedule.size(), precomputedEmbeddings.size());
     }
 
     /**
      * Search knowledge sources for content relevant to the customer's question.
      *
-     * Uses vector similarity search (RAG) when EmbeddingService + DB are available.
-     * Falls back to keyword-based search otherwise.
+     * Priority:
+     *   1. In-memory vector search (precomputed embeddings + Gemini for query embedding)
+     *   2. DB vector search (pgvector)
+     *   3. Keyword-based fallback
      */
     public String searchRelevantKnowledge(String question) {
-        if (isVectorSearchAvailable()) {
-            return vectorSearch(question);
+        if (isInMemoryVectorSearchAvailable()) {
+            return inMemoryVectorSearch(question);
+        }
+        if (isDbVectorSearchAvailable()) {
+            return dbVectorSearch(question);
         }
         return keywordSearch(question);
     }
 
-    private boolean isVectorSearchAvailable() {
+    private boolean isInMemoryVectorSearchAvailable() {
+        return embeddingService != null && !precomputedEmbeddings.isEmpty();
+    }
+
+    private boolean isDbVectorSearchAvailable() {
         return embeddingService != null && knowledgeArticleRepository != null
                 && knowledgeArticleRepository.countByCompanyIdIsNull() > 0;
     }
 
     /**
-     * RAG: Embed the question, query pgvector for top-K similar knowledge chunks.
+     * In-memory RAG: Embed the question, compute cosine similarity against precomputed vectors.
      */
-    private String vectorSearch(String question) {
+    private String inMemoryVectorSearch(String question) {
+        try {
+            float[] queryEmbedding = embeddingService.embed(question);
+
+            // Compute similarity for each precomputed embedding
+            List<Map.Entry<Double, String>> scored = new ArrayList<>();
+            for (Map<String, Object> article : precomputedEmbeddings) {
+                List<Number> embeddingValues = (List<Number>) article.get("embedding");
+                if (embeddingValues == null || embeddingValues.isEmpty()) continue;
+
+                float[] docEmbedding = new float[embeddingValues.size()];
+                for (int i = 0; i < embeddingValues.size(); i++) {
+                    docEmbedding[i] = embeddingValues.get(i).floatValue();
+                }
+
+                double similarity = cosineSimilarity(queryEmbedding, docEmbedding);
+                String content = (String) article.get("content");
+                String kind = (String) article.get("kind");
+                scored.add(Map.entry(similarity, kind + ": " + content));
+            }
+
+            // Sort by similarity descending, take top-K
+            scored.sort((a, b) -> Double.compare(b.getKey(), a.getKey()));
+
+            StringBuilder context = new StringBuilder();
+            int count = 0;
+            for (Map.Entry<Double, String> entry : scored) {
+                if (count >= TOP_K) break;
+                if (entry.getKey() < 0.3) break;
+
+                context.append(entry.getValue()).append("\n\n");
+                count++;
+            }
+
+            if (context.isEmpty()) {
+                log.info("In-memory vector search found no relevant results, falling back to keyword");
+                return keywordSearch(question);
+            }
+
+            log.info("In-memory vector search returned {} relevant chunks (top similarity: {})",
+                    count, scored.get(0).getKey());
+            return context.toString();
+        } catch (Exception e) {
+            log.warn("In-memory vector search failed, falling back to keyword: {}", e.getMessage());
+            return keywordSearch(question);
+        }
+    }
+
+    private double cosineSimilarity(float[] a, float[] b) {
+        if (a.length != b.length) return 0.0;
+        double dotProduct = 0, normA = 0, normB = 0;
+        for (int i = 0; i < a.length; i++) {
+            dotProduct += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
+        }
+        double denom = Math.sqrt(normA) * Math.sqrt(normB);
+        return denom == 0 ? 0.0 : dotProduct / denom;
+    }
+
+    /**
+     * DB RAG: Embed the question, query pgvector for top-K similar knowledge chunks.
+     */
+    private String dbVectorSearch(String question) {
         try {
             String queryVector = embeddingService.embedAsVectorString(question);
             List<Object[]> results = knowledgeArticleRepository.findSimilarGlobal(queryVector, TOP_K);

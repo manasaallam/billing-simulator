@@ -14,6 +14,16 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateEmail(DuplicateEmailException ex) {
+        return errorResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     @ExceptionHandler(RateNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleRateNotFound(RateNotFoundException ex) {
         return errorResponse(HttpStatus.NOT_FOUND, ex.getMessage());

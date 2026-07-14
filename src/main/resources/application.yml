@@ -18,14 +18,20 @@ spring:
   #   url:  jdbc:postgresql://db.<project-ref>.supabase.co:5432/postgres?sslmode=require
   #   user: postgres
   datasource:
-    url: jdbc:postgresql://db.eufqlrsyxjbgyyxwntke.supabase.co:5432/postgres?sslmode=require
+    # Supabase direct connection with SSL cert validation bypassed (JRE cacerts issue)
+    url: jdbc:postgresql://db.eufqlrsyxjbgyyxwntke.supabase.co:5432/postgres?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory
     username: postgres
     password: SSIWt4eKey1xiSpB
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
+      connection-timeout: 30000
+      initialization-fail-timeout: 30000
 
   jpa:
+    # Dialect set explicitly so Hibernate does not need a live connection at startup
+    # to auto-detect it (avoids NullPointerException when Supabase is unreachable).
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       # Schema is managed by the standalone scripts in /database (run in Supabase),
       # so Hibernate must NOT create or alter tables.
@@ -37,3 +43,17 @@ spring:
 
 server:
   port: 8080
+
+# Gemini AI — set GEMINI_API_KEY env variable to activate embedding + generation
+# Without it, LocalRuleBasedAiClient is used (regex patterns, no vectorization)
+# Get key: https://aistudio.google.com/apikey
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-2.5-flash
+
+# JWT session-token settings.
+# Override JWT_SECRET in production — must be at least 32 bytes for HS256.
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-me-billing-simulator-jwt-secret-0123456789}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
