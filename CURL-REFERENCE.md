@@ -229,14 +229,16 @@ curl -X POST http://localhost:8080/api/simulate \
 ```
 curl -X POST http://localhost:8080/api/simulate \
   -H "Content-Type: application/json" \
-  -d '{"contractId":"CTR-001","naturalLanguageQuery":"How can I save money?"}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"naturalLanguageQuery":"How can I save money?"}'
 ```
 
 **Clarification reply (skip AI re-extraction)**
 ```
 curl -X POST http://localhost:8080/api/simulate \
   -H "Content-Type: application/json" \
-  -d '{"contractId":"CTR-001","naturalLanguageQuery":"Grow volume to 50 packages per week","extractedParameters":{"scenarioType":"VOLUME_CHANGE","newWeeklyVolume":50}}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"naturalLanguageQuery":"Grow volume to 50 packages per week","extractedParameters":{"scenarioType":"VOLUME_CHANGE","newWeeklyVolume":50}}'
 ```
 
 ---

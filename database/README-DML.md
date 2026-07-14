@@ -26,15 +26,15 @@ psql "postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgre
 | Service levels | GROUND, GROUND_RES, THREE_DAY, TWO_DAY, EXPRESS_SAVER, EXPRESS, INTL_EXP_EXPORT, INTL_EXP_IMPORT, INTL_STANDARD (each mapped to its category) |
 | Dim factors | dimensional-weight divisors per service |
 | Accessorial rule cards | 12 codes: RESIDENTIAL, DELIVERY_AREA, DELIVERY_AREA_EXT, RESIDENTIAL_INTL, DELIVERY_AREA_IMPORT, DELIVERY_AREA_IMPORT_EXT, DELIVERY_AREA_EXPORT_EXT, ADDL_HANDLING, DEMAND, SATURDAY, DECLARED_VALUE, PREMIUM_AIR |
-| Fuel program + weekly index | 4 sample weeks (fuel % rising 14.00 → 15.00) |
-| Zone matrix | sample origin/dest prefix → zone |
-| Rate card | published rates for a few service / zone / weight breaks |
+| Fuel program + weekly index | weekly index covering Jul 2025 → Jul 2026 (fuel % ranging ~12.00 → 16.50) |
+| Zone matrix | origin/dest prefix → zone; covers zones 2–8 across ATL/CHI/DAL/LA/NY origins |
+| Rate card | two versions: `2026-01` (current) and `2025-01` (last-year) across more services / zones / weight breaks |
 | Minimum shipping charge | floors for GROUND and THREE_DAY |
 | **Pricing programs** | one FLAT + one VOLUME_TIERED |
 | **Discount tiers** | all 5 categories × 6 volume bands for TIERED; all 5 categories single band for FLAT |
 | Account / user / profile | one demo customer |
 | Contract | demo account → **VOLUME_TIERED** program, **40% off 7 surcharge codes** (domestic + international residential/delivery-area variants) |
-| Sample shipments | a small baseline slice + itemized charge lines |
+| Sample shipments | current-year slice (2026) **plus 30 last-year shipments (Jul–Dec 2025)** spanning zones 2–8 and services GROUND, GROUND_RES, THREE_DAY, TWO_DAY, EXPRESS_SAVER, EXPRESS; includes itemized charge lines |
 | Baseline snapshot | frozen aggregate, `avg_weekly_volume = 20` |
 | Knowledge articles | RAG seed for the invoice explainer |
 
@@ -64,6 +64,9 @@ fixed-discount comparison can be shown if needed.
 
 ## Notes
 
-- `password_hash` is a placeholder — replace with a real BCrypt hash from the app.
+- `app_user.auth_provider_uid` is a placeholder — replace with a real BCrypt hash
+  (local auth) or the OAuth provider UID from the app.
+- `knowledge_article.embedding` is seeded as `NULL`; the app generates the
+  1536-dim vector at runtime. The column is nullable in the schema for this reason.
 - All names and numbers are **generic samples** for the hackathon; they do not
   represent any real carrier's published pricing.

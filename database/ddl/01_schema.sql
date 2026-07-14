@@ -347,7 +347,7 @@ CREATE TABLE knowledge_article (
     kind            VARCHAR(20) NOT NULL,   -- INVOICE_SECTION / CHARGE_EXPLANATION / POLICY
     key_code        VARCHAR(60) NOT NULL,   -- 'Fuel Surcharge' / 'DEMAND'
     content         TEXT NOT NULL,
-    embedding       vector(1536) NOT NULL,
+    embedding       vector(1536),           -- nullable: seeded rows are embedded at runtime by the app
     business_reason TEXT,
     source_doc      VARCHAR(120),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
