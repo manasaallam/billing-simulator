@@ -1,0 +1,74 @@
+[
+  {
+    "code": "FUEL",
+    "name": "Fuel Surcharge",
+    "description": "Applied as a percentage of transportation charges, based on the weekly national diesel price index.",
+    "trigger": "All shipments",
+    "currentRate": "14.75% (Ground), 24.00% (Air)",
+    "businessReason": "Offsets fluctuating fuel costs based on US Energy Information Administration diesel index."
+  },
+  {
+    "code": "DAS",
+    "name": "Delivery Area Surcharge",
+    "description": "Charged for deliveries to ZIP codes classified as extended/remote delivery areas.",
+    "trigger": "Destination ZIP in DAS table",
+    "currentRate": "$7.75 per package",
+    "businessReason": "Covers additional cost to reach remote or low-density delivery areas."
+  },
+  {
+    "code": "RES",
+    "name": "Residential Surcharge",
+    "description": "Charged for deliveries to residential addresses.",
+    "trigger": "DeliveryType = Residential",
+    "currentRate": "$6.50 per package",
+    "businessReason": "Residential deliveries require individual stops vs bulk commercial drops."
+  },
+  {
+    "code": "AH",
+    "name": "Additional Handling",
+    "description": "Charged for packages exceeding size or weight thresholds requiring special handling.",
+    "trigger": "Weight > 50 lbs OR longest side > 48 inches OR second-longest side > 30 inches",
+    "currentRate": "$12.50 - $31.50 per package",
+    "businessReason": "Oversized or overweight packages require manual handling outside automated systems."
+  },
+  {
+    "code": "DS",
+    "name": "Demand Surcharge",
+    "description": "Applied during peak shipping periods when network capacity is constrained.",
+    "trigger": "Peak season (typically Nov-Jan) or volume surge periods",
+    "currentRate": "$0.25 - $6.00 per package (varies by season)",
+    "businessReason": "Manages network capacity during high-demand periods."
+  },
+  {
+    "code": "SAT",
+    "name": "Saturday Delivery",
+    "description": "Charged for packages delivered on Saturday.",
+    "trigger": "Saturday delivery selected",
+    "currentRate": "$16.00 per package",
+    "businessReason": "Weekend delivery requires separate operational scheduling."
+  },
+  {
+    "code": "DV",
+    "name": "Declared Value",
+    "description": "Insurance coverage for packages with declared value above $100.",
+    "trigger": "Declared value > $100",
+    "currentRate": "$1.05 per $100 of declared value",
+    "businessReason": "Additional liability coverage beyond standard $100 included."
+  },
+  {
+    "code": "LPS",
+    "name": "Large Package Surcharge",
+    "description": "Charged for packages exceeding 96 inches in length or 130 inches in combined length + girth.",
+    "trigger": "Length > 96 in OR (length + 2*width + 2*height) > 130 in",
+    "currentRate": "$40.00 per package",
+    "businessReason": "Large packages consume disproportionate trailer/vehicle space."
+  },
+  {
+    "code": "PAF",
+    "name": "Premier Air Fee",
+    "description": "Applied to premium air services with guaranteed early morning delivery.",
+    "trigger": "Next Day Air Early service",
+    "currentRate": "$25.00 per package",
+    "businessReason": "Guarantees priority loading and earliest delivery commitment."
+  }
+]

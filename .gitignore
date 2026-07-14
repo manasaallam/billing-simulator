@@ -38,4 +38,6 @@ Thumbs.db
 
 ### Environment ###
 .env
+*-local.yml
+application-local.yml
 *.log

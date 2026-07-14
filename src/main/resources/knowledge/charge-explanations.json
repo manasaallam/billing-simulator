@@ -1,0 +1,38 @@
+[
+  {
+    "section": "Transportation Charges",
+    "meaning": "Base cost to move the package from origin to destination, determined by service level, weight, zone, and rate chart."
+  },
+  {
+    "section": "Published Charge",
+    "meaning": "The standard rate for the shipment before any contractual discounts are applied."
+  },
+  {
+    "section": "Incentive Credit",
+    "meaning": "Contractual discount applied to the published charge. Based on your negotiated agreement with UPS."
+  },
+  {
+    "section": "Billed Charge",
+    "meaning": "The net transportation charge after incentive credits. Published Charge minus Incentive Credit."
+  },
+  {
+    "section": "Fuel Surcharge",
+    "meaning": "Variable percentage added to transportation charges, recalculated weekly based on the US national diesel price index."
+  },
+  {
+    "section": "Accessorial Charges",
+    "meaning": "Additional fees for services beyond standard pickup-to-delivery, such as residential delivery, DAS, additional handling, etc."
+  },
+  {
+    "section": "Duty & Tax Forwarding",
+    "meaning": "Charges for advancing customs duties and taxes on international shipments on behalf of the receiver."
+  },
+  {
+    "section": "Amount Due",
+    "meaning": "Total charges for the billing period, including all transportation, fuel, and accessorial charges minus credits."
+  },
+  {
+    "section": "Outstanding Balance",
+    "meaning": "Unpaid amounts from previous billing cycles that are still owed."
+  }
+]

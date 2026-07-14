@@ -1,184 +1,184 @@
 # Billing Simulation Agent
 
-Real-time, self-service billing simulation that lets customers explore how shipping decisions impact billing outcomes — powered by Gemini AI for natural-language understanding and business-friendly explanations.
+A self-service tool that lets a customer ask, in plain language,
+*"What happens to my invoice if I change my shipping behavior?"*
+and get an instant, explained projection — instead of waiting 1–2 days
+for an account manager to model it in a spreadsheet.
 
-## Architecture
+> **Docs:** technical design → [`README-DESIGN.md`](README-DESIGN.md) ·
+> database → [`database/README-DDL.md`](database/README-DDL.md),
+> [`database/README-DML.md`](database/README-DML.md)
+
+---
+
+## What it does
+
+- Customer logs in and types a question (e.g. *"What if I move 30% of Express to Ground?"*).
+- The system figures out what they mean, runs the numbers, and answers in simple business language.
+- Results are shown as **projections**, not final quotes (with clear caveats).
+- Every projection is grounded in the customer's **own last 12 months** of shipping history.
+
+---
+
+## How login and signup work (plain English)
+
+### Signup — joining the system
+
+When a new user signs up they provide:
+- **Their name and email** — who they are
+- **A password** — at least 8 characters
+- **An access key** — a short company code like `DEMO2026`
+
+The access key is the important one. It is the link between a person and their company's
+shipping data. The company's IT admin or account manager gives this out. Without a valid
+access key that matches an active company in the database, signup is refused.
+
+What happens step by step:
+1. System checks — has this email already been registered? If yes → rejected.
+2. System looks up the access key in the `company` table — does this company exist?
+   If the key is wrong or the company is inactive → rejected.
+3. Password is hashed with BCrypt (never stored as plain text) and saved in the database.
+4. The user is now linked to that company by its internal ID (a UUID, not the access key).
+5. A **JWT token** is issued and returned — the user is now logged in immediately.
+
+### Login — coming back
+
+User provides email + password. That's it — the access key is not asked again.
+
+What happens:
+1. System finds the user by email.
+2. BCrypt compares the entered password against the stored hash — if it doesn't match → rejected.
+3. System checks the company is still `ACTIVE` — if not → rejected with a clear message.
+4. A fresh **JWT token** is issued and returned.
+
+### The JWT token — how it keeps you logged in
+
+JWT = JSON Web Token. Think of it as a secure digital pass that the server issues.
+
+- It contains: your user ID, email, role (`CUSTOMER`/`ADMIN`), and company ID.
+- It expires after **1 hour** (configurable).
+- Every API call after login must include it in the `Authorization: Bearer <token>` header.
+- The server reads the token, trusts it (because it's cryptographically signed), and knows who you are — **without touching the database on every request**.
+- If the token is missing, tampered with, or expired → the request is rejected with 401.
+
+### Access key — one-time company linker
+
+The access key (e.g. `DEMO2026`) is used **only at signup**. It is:
+- A human-readable code given to employees of a company.
+- Used once to discover which company's data the new user should be linked to.
+- After signup, the user's database row permanently stores the company's UUID — the access key is never needed again.
+
+---
+
+
+
+1. **Understand** – Is the question complete? If not, ask a clarifying question.
+2. **Route** – Is it a *factual* question (answered from documents) or a *calculation* question?
+3. **Calculate** – The Java rate engine does all the math (never the AI).
+4. **Explain** – AI turns the numbers into a plain-language answer.
+
+> Rule: **AI only reads, asks, and explains. All money math is done by the deterministic rate engine.**
+
+---
+
+## Pricing programs
+
+There are **two ways** a customer's discount can work:
+
+| Program | How the discount works | Example (Ground) |
+|---|---|---|
+| **Flat** ("Everyday Savings") | Fixed discount, no matter the volume | Always 39% off |
+| **Volume-Tiered** ("Save as You Grow") | Discount **grows as weekly volume grows** | 36% → 44% → 52% off |
+
+### The program we are using: **Volume-Tiered**
+
+**Why:** the main customer question is *"what happens if I change my volume?"*
+- With a flat program, more volume is just a boring straight multiply.
+- With a tiered program, more volume can **unlock a better discount tier**, so the
+  cost *per package* actually drops.
+
+This produces the "aha" insight the tool is meant to deliver, e.g.:
+> *"Growing to 30 shipments/week moves you into a better tier — your Ground
+> discount rises from 36% to 44%, lowering your cost per package."*
+
+The flat program is still kept in the data (as a simple one-tier case) so we can
+show a comparison if needed.
+
+---
+
+## Services supported
+
+| Service | Type | Discount category |
+|---|---|---|
+| Ground | Domestic | Ground |
+| Ground Residential | Domestic | Ground |
+| 3 Day Select | Domestic | Ground |
+| 2 Day Air | Domestic Air | Air |
+| Express Saver | Domestic Air | Air |
+| Next Day Express | Domestic Air | Air |
+| International Express Export | International | Intl Express Export |
+| International Express Import | International | Intl Express Import |
+| International Standard | International | Intl Standard |
+
+---
+
+## Types of questions the simulator answers
+
+- **Volume change** – "increase / reduce my volume by X%"
+- **Service shift** – "move X% of Express shipments to Ground"
+- **Package profile** – "if my average package weight changes"
+- **Zone mix** – "if more shipments go to farther zones"
+- **Accessorial** – "if I reduce residential deliveries"
+
+> Surcharge discounts (40% off) apply to **7 specific charges**: domestic residential,
+> domestic delivery area (standard + extended), international residential,
+> import delivery area (standard + extended), and export delivery area extended.
+> All other surcharges (demand, additional handling, etc.) are charged in full.
+- **Fuel change** – "if fuel goes up 5% next month"
+- **Optimize** – "how do I reduce my cost?"
+- **Explain my invoice** – "why am I charged a Demand Surcharge?"
+
+---
+
+## Two cost views (important)
+
+The tool always compares **two numbers**:
+
+1. **Published vs Net** – the list price vs your discounted price (difference = *incentive credit*, shown on the invoice).
+2. **Baseline vs Projected** – your current invoice vs the what-if scenario (difference = *projected savings*).
+
+---
+
+## How the cost is calculated (simple view)
 
 ```
-React UI
-    │
-    ▼
-Spring Boot APIs (Orchestrator)
-    │
-    ├──► Gemini (Vertex AI) — NL parameter extraction
-    ├──► BigQuery — Customer historical baseline (last 12 months)
-    ├──► Java Rate Engine — Deterministic billing simulation
-    ├──► Vector Search — Relevant policies & rate guides
-    │
-    ▼
-Gemini (Vertex AI) — Business-language explanation
-    │
-    ▼
-React Dashboard (results + explanation + confidence)
+Base rate (by service, zone, weight)
+  − program discount (applies to base transportation only)
+  = net transportation   (never below the minimum shipping charge)
+  + fuel surcharge        (fuel index based)
+  + accessorial charges   (residential, delivery-area, etc.)
+  − incentive credits
+  = projected invoice total
 ```
 
-## Project Structure
+---
 
-```
-src/main/java/com/example/billingsimulator/
-│
-├── BillingSimulatorApplication.java          # Spring Boot entry point
-│
-├── controller/
-│   ├── InvoiceController.java                # CRUD endpoints for invoices
-│   └── SimulationController.java             # POST /api/simulate — main simulation endpoint
-│                                             # POST /api/simulate/clarify — submit clarification answers
-│
-├── service/
-│   ├── SimulationOrchestrator.java           # Central coordinator — wires all services together
-│   │                                         #   1. Extract → 2. Validate → 3. Baseline → 4. Simulate → 5. Explain → 6. Audit
-│   │
-│   ├── ParameterExtractionService.java       #Gemini NL → structured SimulationParameters
-│   ├── ParameterValidationService.java       #  Validate params, return clarification questions if ambiguous
-│   │
-│   ├── BaselineService.java                  # Fetch customer's 12-month history from BigQuery
-│   ├── RateEngineService.java                # Run existing Java rate engine with injected scenario parameters
-│   ├── ExplanationService.java               # Gemini: simulation results → business-friendly explanation
-│   ├── PolicySearchService.java              # Vector Search: retrieve relevant rate policies for RAG context
-│   ├── AuditService.java                     # Persist audit trail (inputs, parameters, baseline, results)
-│   └── InvoiceService.java                   # CRUD operations for invoices
-│
-├── model/
-│   ├── SimulationRequest.java                # Incoming request: customerId + NL query + conversationId
-│   ├── SimulationParameters.java             # Structured params extracted from NL
-│   ├── ServiceShift.java                     # "Move X% from ServiceA to ServiceB"
-│   ├── VolumeChange.java                     # "Increase/decrease volume by X packages or Y%"
-│   ├── PackageProfile.java                   # "Change avg weight/dimensions"
-│   ├── CustomerBaseline.java                 # Historical data: shipments, spend, discounts by service level
-│   ├── SimulationResult.java                 # Rate engine output: current vs. simulated cost, savings, confidence
-│   ├── SimulationResponse.java               # API response: result OR clarification questions + disclaimer
-│   ├── ClarificationQuestion.java            # Follow-up question when params are ambiguous
-│   ├── SimulationAuditLog.java               # JPA entity for audit persistence
-│   └── Invoice.java                          # Invoice entity
-│
-├── repository/
-│   ├── InvoiceRepository.java                # JPA repo for invoices
-│   └── SimulationAuditLogRepository.java     # JPA repo for simulation audit logs
-│
-├── config/
-│   ├── SecurityConfig.java                   # Spring Security — permits simulation endpoints
-│   ├── CorsConfig.java                       # CORS for React frontend (localhost:3000)
-│   ├── GeminiConfig.java                     # Vertex AI / Gemini client configuration
-│   └── BigQueryConfig.java                   # BigQuery client and cost control settings
-│
-└── exception/
-    ├── ClarificationRequiredException.java   # Thrown when params need clarification
-    └── GlobalExceptionHandler.java           # Maps exceptions to structured JSON responses
-```
+## Key principles
 
-## Simulation Flow
+- **Reuse, don't rewrite** – use the existing rate engine, just inject scenario parameters.
+- **Projections, not quotes** – always framed with confidence / caveats.
+- **Grounded in real history** – uses the customer's own 12-month baseline.
+- **Ask, don't assume** – clarify ambiguous questions instead of guessing.
+- **Auditable** – every scenario stores its inputs, assumptions, and outputs.
+- **Secure** – results reveal sensitive pricing, so access is controlled per customer.
 
-```
-Customer: "What if I shift 20% of Express to Ground?"
-                         │
-                         ▼
-         ┌─ ParameterExtractionService (Gemini) ──┐
-         │  Extracts: {from: Express,              │
-         │             to: Ground, pct: 20%}       │
-         └─────────────────────────────────────────┘
-                         │
-                         ▼
-         ┌─ ParameterValidationService ────────────┐
-         │  ✓ Service levels valid                  │
-         │  ✓ Percentage in range                   │
-         │  ✗ Missing? → ClarificationQuestion      │
-         └─────────────────────────────────────────┘
-                         │
-                         ▼
-         ┌─ BaselineService (BigQuery) ────────────┐
-         │  Last 12 months: 10K Express, 5K Ground │
-         │  Avg weight: 8lb, Monthly spend: $35K   │
-         └─────────────────────────────────────────┘
-                         │
-                         ▼
-         ┌─ RateEngineService ─────────────────────┐
-         │  Current: $35,000/mo                     │
-         │  Simulated: $30,800/mo                   │
-         │  Savings: $4,200 (12%)                   │
-         └─────────────────────────────────────────┘
-                         │
-                         ▼
-         ┌─ ExplanationService (Gemini) ───────────┐
-         │  "Shifting 20% of Express to Ground     │
-         │   could save ~$4,200/month (12%)..."     │
-         └─────────────────────────────────────────┘
-                         │
-                         ▼
-         ┌─ AuditService ─────────────────────────┐
-         │  Log: query, params, baseline, result   │
-         └─────────────────────────────────────────┘
-```
+---
 
-## Team Ownership
+## Tech stack (planned)
 
-| Component | Owner | Status |
-|-----------|-------|--------|
-| ParameterExtractionService | **Your team** | To implement |
-| ParameterValidationService | **Your team** | To implement |
-| SimulationOrchestrator | Shared | To implement |
-| BaselineService | Team B | To implement |
-| RateEngineService | Team C | To implement |
-| ExplanationService | Team D | To implement |
-| PolicySearchService | Team D | To implement |
-| AuditService | Shared | To implement |
-| React Frontend | Frontend team | To implement |
+- **Frontend:** React (login/signup + chat experience)
+- **Backend:** Java / Spring Boot (rate engine + APIs)
+- **Database:** Supabase (PostgreSQL) — shipments, rate cards, contracts
+- **AI / Cloud:** Google Cloud – Vertex AI (Gemini) for language + RAG for factual answers
 
-## Tech Stack
-
-- Java 17
-- Spring Boot 3.3.1
-- Spring Security
-- Spring Data JPA
-- Gemini (Vertex AI)
-- Google BigQuery
-- Vector Search
-- H2 (dev) / PostgreSQL (prod)
-- Maven
-
-## Running Locally
-
-```bash
-# Uses H2 in-memory database (dev profile active by default)
-mvn spring-boot:run
-
-# App starts at http://localhost:8080
-# H2 console at http://localhost:8080/h2-console
-```
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/simulate` | Submit NL query for billing simulation |
-| POST | `/api/simulate/clarify` | Submit clarification answers |
-| GET | `/api/invoices` | List all invoices |
-| GET | `/api/invoices/{id}` | Get invoice by ID |
-| POST | `/api/invoices` | Create a new invoice |
-| PUT | `/api/invoices/{id}` | Update an invoice |
-| DELETE | `/api/invoices/{id}` | Delete an invoice |
-| GET | `/api/invoices/customer/{name}` | Get invoices by customer |
-| GET | `/api/invoices/status/{status}` | Get invoices by status |
-
-## Key Considerations
-
-- **Projection Framing**: Results are projections, not quotes — confidence indicators and disclaimers included
-- **Input Validation**: Ambiguous queries trigger clarification questions instead of assumed simulations
-- **Cost Control**: BigQuery uses partition pruning + caching to minimize query costs
-- **Auditability**: Every simulation logged with inputs, parameters, baseline, and results
-- **Security**: Access control on simulation endpoints; sensitive pricing data protected
-
-## Running Tests
-
-```bash
-mvn test
-```
+> Note: all pricing names and values in this project are **generic samples** for the hackathon.
