@@ -49,7 +49,7 @@ server:
 # Get key: https://aistudio.google.com/apikey
 gemini:
   api-key: ${GEMINI_API_KEY:}
-  model: gemini-2.5-flash
+  model: gemini-3-flash-preview
 
 # JWT session-token settings.
 # Override JWT_SECRET in production — must be at least 32 bytes for HS256.
