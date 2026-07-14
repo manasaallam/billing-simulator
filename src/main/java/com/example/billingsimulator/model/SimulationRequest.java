@@ -1,6 +1,5 @@
 package com.example.billingsimulator.model;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -20,9 +19,6 @@ import jakarta.validation.constraints.Size;
  */
 public class SimulationRequest {
 
-    @NotBlank(message = "Contract ID is required")
-    private String contractId;
-
     @Size(min = 10, max = 2000, message = "Query must be between 10 and 2000 characters")
     private String naturalLanguageQuery;
 
@@ -31,9 +27,6 @@ public class SimulationRequest {
     private String conversationId;  // Links clarification answers back to original query
 
     public SimulationRequest() {}
-
-    public String getContractId() { return contractId; }
-    public void setContractId(String contractId) { this.contractId = contractId; }
 
     public String getNaturalLanguageQuery() { return naturalLanguageQuery; }
     public void setNaturalLanguageQuery(String naturalLanguageQuery) { this.naturalLanguageQuery = naturalLanguageQuery; }
