@@ -73,6 +73,9 @@ public class SimulationService {
         int currentVolume = baseline.getAvgWeeklyVolume().intValue();
         int newVolume = req.getNewWeeklyVolume();
 
+        // Volume scaling factor: more shipments = proportionally more cost before discount adjustment
+        BigDecimal volumeScale = BigDecimal.valueOf((double) newVolume / currentVolume);
+
         // Baseline annual cost breakdown (transport vs non-transport)
         BigDecimal annualCost = baseline.getTotalCost();
         BigDecimal spendByServiceTotal = sumSpendByService(metrics);
@@ -80,7 +83,7 @@ public class SimulationService {
                 ? spendByServiceTotal : annualCost.multiply(BigDecimal.valueOf(0.72));
         BigDecimal nonTransportPortion = annualCost.subtract(transportPortion);
 
-        // Per-category transport projection
+        // Per-category transport projection (scaled by volume, then adjusted for tier change)
         Map<String, BigDecimal> spendByService = getSpendByService(metrics);
         Map<String, BigDecimal> projectedByCategory = new LinkedHashMap<>();
         BigDecimal projectedTransport = BigDecimal.ZERO;
@@ -98,17 +101,23 @@ public class SimulationService {
             DiscountTier newTier = discountTierRepo.findTier(contract.getProgramId(), category, newVolume)
                     .orElse(null);
             if (currentTier == null || newTier == null) {
-                projectedByCategory.put(serviceCode, serviceCost);
-                projectedTransport = projectedTransport.add(serviceCost);
+                // No tier info — just scale by volume
+                BigDecimal scaled = serviceCost.multiply(volumeScale).setScale(SCALE, HALF_UP);
+                projectedByCategory.put(serviceCode, scaled);
+                projectedTransport = projectedTransport.add(scaled);
                 continue;
             }
+            // Scale cost by volume, then adjust for discount tier change
+            BigDecimal scaledCost = serviceCost.multiply(volumeScale).setScale(SCALE, HALF_UP);
             BigDecimal projected = engine.projectTransportCost(
-                    serviceCost, currentTier.getDiscountPct(), newTier.getDiscountPct());
+                    scaledCost, currentTier.getDiscountPct(), newTier.getDiscountPct());
             projectedByCategory.put(serviceCode, projected);
             projectedTransport = projectedTransport.add(projected);
         }
 
-        BigDecimal projectedAnnual = projectedTransport.add(nonTransportPortion).setScale(SCALE, HALF_UP);
+        // Non-transport costs (fuel, accessorials) also scale with volume
+        BigDecimal scaledNonTransport = nonTransportPortion.multiply(volumeScale).setScale(SCALE, HALF_UP);
+        BigDecimal projectedAnnual = projectedTransport.add(scaledNonTransport).setScale(SCALE, HALF_UP);
 
         // Tier band for response
         String primaryCategory = primaryCategory(spendByService);
